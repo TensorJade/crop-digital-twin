@@ -70,6 +70,8 @@ class WeatherData(InputModel):
     elevation_m: Finite = Field(ge=-500, le=9000)
     wind_height_m: Literal[2] = 2
     time_basis: Literal["Asia/Shanghai", "UTC", "LST"]
+    angstrom_a: Finite | None = Field(default=None, ge=0.1, le=0.4)
+    angstrom_b: Finite | None = Field(default=None, ge=0.3, le=0.7)
     csv_text: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(
         min_length=1, max_length=262144
     )
@@ -81,6 +83,11 @@ class WeatherData(InputModel):
             raise ValueError("站点天气需要填写气象站编号")
         if self.source_kind == "gridded" and self.station_id is not None:
             raise ValueError("网格天气不填写气象站编号")
+        if (self.angstrom_a is None) != (self.angstrom_b is None):
+            raise ValueError("蒸散计算系数 A/B 应同时填写或同时留空")
+        if self.angstrom_a is not None and self.angstrom_b is not None:
+            if not 0.6 <= self.angstrom_a + self.angstrom_b <= 0.9:
+                raise ValueError("蒸散计算系数 A+B 应位于 0.6–0.9")
         return self
 
 
@@ -164,7 +171,7 @@ class ReportResponse(BaseModel):
     """Completeness cannot be confused with an executed/validated simulation."""
 
     input_ready: bool
-    simulation_available: Literal[False]
+    simulation_available: bool
     blocking_issues: list[IssueResponse]
     warnings: list[IssueResponse]
     missing_weather_days: int

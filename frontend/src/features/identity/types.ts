@@ -41,6 +41,10 @@ export const roleLabels: Record<Role, string> = {
   viewer: '仅查看',
 }
 export const actionLabels: Record<string, string> = {
+  'simulation.queued': '提交生长计算',
+  'simulation.started': '开始生长计算',
+  'simulation.succeeded': '保存生长结果',
+  'simulation.failed': '记录计算失败',
   'identity.bootstrap': '建立组织与管理员',
   'identity.legacy_adopted': '接收旧地块',
   'identity.user_created': '建立成员账号',

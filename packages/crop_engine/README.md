@@ -1,11 +1,11 @@
 # 作物算法包（Python）
 
-包版本 0.2.0，当前交付 inputs.py：天气 CSV 解析、原始单位到 PCSE 字段的转换、WOFOST72 参数结构和静态完整性检查、规范 JSON 与 SHA-256。纯函数不依赖 API、数据库、网络或 PCSE 运行环境。
+包0.3.0包含inputs.py纯天气CSV/参数结构/单位/规范JSON与哈希检查，potential.py运行条件和隔离协议，pcse_runner.py真实PCSE6.0.13 Wofost72_PP。算法不依赖HTTP/数据库，PCSE只在私有临时子进程导入，父进程不产生默认配置/演示库副作用。
 
-天气日期不重复、不超未来、不补缺测；雨量 mm→cm、辐射 MJ/m²→J/m²、蒸汽压 kPa→hPa，风速必须为 2m 观测。保留原值，超出 PCSE 标准范围时在预检阻塞。E0/ES0/ET0 尚未计算，输出并非已可运行的 WeatherDataProvider。
+天气日期不重复、不超未来、不补缺测。雨mm→cm、辐射MJ/m²→J/m²、蒸汽压kPa→hPa，风速为2m；reference_ET(PM)输出mm/day，除10传WeatherDataContainer E0/ES0/ET0。Angstrom A/B需来源提供，检查单项及总和，不猜测当地值。
 
-完整性清单核对 PCSE6.0.13 的 WOFOST72 组件 ParameterTemplate，不构成全部生理校验。input_ready 只表示本阶段资料静态完整，simulation_available 恒为 false。测试参数为软件检查合成数据，不是可用于华南水稻的参数集。
+静态完整性不等于全部生理/农艺校验。潜在模式仅支持直播实际出苗、完整rice/WOFOST72参数与北京时间连续已发生天气，最多366日。输入报告simulation_available是满足此模式输入，不是模型已运行。结果输出LAI、DVS、TAGP/TWSO干物质与规范天气，真实成功simulation_executed=true；agronomically_validated=false、management_effects_applied=false。
 
-M3.2 再加入真实 pcse_adapter、管理和天气适配，确定水田与移栽过程、来源许可和实测验证。PCSE 尚未作为依赖安装；不得用旧项目演示曲线替代模型。遥感反演、有界校准以后独立交付，不添加假运行接口。
+真实PCSE仅在60s限时隔离子进程运行，输入最多1MiB、输出512KiB；固定模型配置、白名单环境、临时用户配置，不下载天气/参数，不执行用户Python/YAML。版本和许可见根THIRD_PARTY.md。软件测试用自行构造的合成参数，不提供华南生产默认品种；移栽、水田管理/精度及遥感校准以后独立实施。
 
-规范 JSON 按键排序、UTF-8、禁止 NaN，将整数值浮点数归一为整数（包括负零归一为零），使浏览器导出再读取的哈希一致。离线核验入口 scripts/verify_input.py；校验和只检测内容一致性，不是签名或农艺验证。
+规范JSON排序键、UTF-8、禁止NaN，整数值浮点归一为整数（负零为零）。scripts/verify_input.py可核验输入/结果下载的payload/hash；仅证明内容一致，非签名、来源认证或农艺验证。真实PCSE子进程以黑盒执行测试验证，其行覆盖不合并到父pytest覆盖率。

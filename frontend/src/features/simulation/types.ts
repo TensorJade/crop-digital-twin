@@ -20,7 +20,7 @@ export interface InputIssue {
 }
 export interface InputReport {
   input_ready: boolean
-  simulation_available: false
+  simulation_available: boolean
   blocking_issues: InputIssue[]
   warnings: InputIssue[]
   missing_weather_days: number

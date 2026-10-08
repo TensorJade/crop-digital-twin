@@ -1,22 +1,22 @@
 # 实际开发进度
 
-更新日期：2026-10-08。首版范围：华南水稻。当前版本：0.4.0。
+更新日期：2026-10-08。首版范围：华南水稻。软件版本0.5.0，算法包0.3.0。
 
 | 阶段 | 交付目标 | 当前状态 |
 |---|---|---|
-| S0 | 目录、Git、入口、契约、检查、日志 | 已完成开发骨架 |
-| S1 | 登录权限、地块、种植季、农事、持久化 | M1、M2 已通过本地与远程 CI |
-| S2 | 天气/土壤快照、PCSE、任务重算与版本 | M3.1 输入资料和不可变快照已实现；M3.2 引擎与天气源未开始 |
-| S3 | 授权底图、地块矢量、长势与时间轴 | 未开始 |
+| S0 | 目录、Git、入口、契约、检查、日志 | 开发骨架已完成 |
+| S1 | 登录权限、地块、种植季、农事、持久化 | M1/M2 已通过本地与远程 CI |
+| S2 | 输入、PCSE、重算与版本 | M3.1 已通过 CI；M3.2 潜在计算已通过本地检查，远程核验待推送 |
+| S3 | 授权底图、地块矢量、长势与时间轴 | 数值曲线/日期已交付；地图未开始 |
 | S4 | 无人机质控、反射率与 LAI 反演 | 未开始 |
 | S5 | 有界校准、独立验证、恢复与发布验收 | 未开始 |
 
-M1 农田管理与 M2 账户授权共 19 个操作、八张业务表。M3.1 新增土壤登记、品种参数 JSON 和天气 CSV 导入、逐日输入检查、追加版本快照和下载，复用组织、角色、CSRF 和同事务审计。当前共 20 条路径、26 个 GET/POST 操作、十张业务表，迁移到 0003_simulation_inputs。
+当前共22条路径、29个 GET/POST 操作、11张业务表，四份冻结增量迁移。M3.2 新增三个操作和一个任务/结果表，SQL 持久排队、独立 worker、隔离真实 PCSE6.0.13 Wofost72_PP，结果保留输入哈希、引擎/适配/软件版本和适用条件。
 
-本地后端与纯输入检查 102 项通过，62 项 PostgreSQL 用例因未配置本机测试数据库而跳过，合并行覆盖率 98.17%。前端 20 项单元、11 条 Edge 浏览器流程通过；已检查桌面/390px 手机截图，实际下载文件通过离线校验和核验。远程 PostgreSQL17/SQLite CI 共 164 项全通过、无跳过，覆盖率 98.30%；20 项单元和 11 条 Chromium 流程通过。实现提交 efc95d0 的 [CI](https://github.com/TensorJade/crop-digital-twin/actions/runs/37768936266) 为 success；完整证据见 [M3.1 日志](dev-log/2026-10-08-simulation-inputs.md)。
+本地后端/算法216项中137通过、79项 PostgreSQL 用例因未配置本机测试数据库而跳过，合并行覆盖率94.92%。前端22项单元、13条 Edge 浏览器流程通过，曲线桌面/390px手机截图已查看；实际 PCSE 结果由浏览器下载并通过离线核验。Ruff、mypy（61文件）、契约和30项工作区文件检查通过。PCSE 子进程未合并进父进程行覆盖率，真实内核由黑盒执行测试验证，软件测试不证明农艺精度。远程 PostgreSQL17/Chromium CI 结果待记录。
 
-默认运行 SQLite 已从 0002 增量升级至 0003，原有记录数量保持为零，未创建用户、组织、测试农田或默认模型参数。本机 Docker 未运行。production 保护保留到 M7。
+默认运行 SQLite 已从0003增量升级至0004，原有记录数量保持零，新任务数量零，未创建运行用户、组织、试验农田或默认参数。空队列 worker -Once 正常退出。本机 Docker 未运行；production 保护保留到M7。
 
-M3 保持进行中：input_ready 表示静态完整性，simulation_available 和 simulation_executed 均为 false。当前无生长模型执行、自动气象站搜索、联网天气下载、地图、遥感、队列或生产备份恢复。品种、水田管理和精度需单独验证，不以软件覆盖率证明农艺有效性。
+新输入的 input_ready 表示静态完整性；simulation_available 表示满足潜在计算输入条件，不代表 worker 在线或参数精度。旧快照不改写，输入 simulation_executed 仍为false，实际成功结果为true、agronomically_validated=false。潜在模式假定水肥充足，仅直播出苗和已发生的连续北京时间天气，不计算实际灌排/施肥效应。
 
-[M1 日志](dev-log/2026-10-08-farm-management.md)、[M2 日志](dev-log/2026-10-08-identity.md)保留此前验证。后续顺序见 [模块路线](module-roadmap.md)。代码和日志同步至 [远程仓库](https://github.com/TensorJade/crop-digital-twin)，当前功能分支 codex/feature_simulation_inputs_20261008。
+M3整体保持进行中：自动站点搜索/授权天气下载、移栽/水田适配及当地实测验证待交付。地图、遥感校准、备份恢复和公开发布尚未实施。见 [M3.2 日志](dev-log/2026-10-08-potential-simulation.md)、[模块路线](module-roadmap.md)。此前 [M1](dev-log/2026-10-08-farm-management.md)、[M2](dev-log/2026-10-08-identity.md)、[M3.1](dev-log/2026-10-08-simulation-inputs.md) 日志保留当时证据。当前功能分支 codex/feature_pcse_20261008。

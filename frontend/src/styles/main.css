@@ -895,3 +895,142 @@ textarea {
     flex-wrap: wrap;
   }
 }
+
+.simulation-run-panel {
+  min-width: 0;
+  padding: 26px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.run-start-form {
+  margin-top: 24px;
+}
+.entry-form .run-assumption-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.run-assumption-check input {
+  width: auto;
+  margin-top: 6px;
+}
+.run-current {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.growth-result {
+  margin-top: 24px;
+}
+.growth-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.growth-values p {
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--field-green);
+}
+.growth-values small,
+.growth-values span {
+  display: block;
+  color: #60736a;
+  font-size: 13px;
+}
+.growth-values strong {
+  display: block;
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+}
+.growth-date-control {
+  display: grid;
+  gap: 6px;
+  margin: 18px 0;
+}
+.growth-date-control input {
+  width: 100%;
+  accent-color: var(--field-green);
+}
+.growth-metric {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.growth-metric select {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--line);
+  background: white;
+}
+.growth-chart {
+  width: 100%;
+  display: block;
+  margin: 18px 0;
+}
+.growth-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.growth-line {
+  fill: none;
+  stroke: var(--field-green);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.growth-point {
+  fill: var(--harvest);
+  stroke: white;
+  stroke-width: 2;
+}
+.growth-chart text {
+  fill: #60736a;
+  font-size: 12px;
+  font-family: Consolas, monospace;
+}
+.growth-result details {
+  margin-top: 20px;
+}
+.growth-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.growth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.growth-table th,
+.growth-table td {
+  padding: 9px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .simulation-run-panel {
+    padding: 18px;
+  }
+  .growth-values {
+    gap: 10px;
+  }
+  .growth-values strong {
+    font-size: 22px;
+    overflow-wrap: anywhere;
+  }
+  .growth-chart text {
+    font-size: 24px;
+  }
+  .growth-metric {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .season-tabs button {
+    padding-inline: 10px;
+  }
+}

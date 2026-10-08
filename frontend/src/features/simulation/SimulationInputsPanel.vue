@@ -174,7 +174,9 @@ onMounted(() => void reload())
       </div>
       <span class="local-badge">资料准备</span>
     </div>
-    <p class="muted">保存土壤、品种和天气的版本，再检查这一季的资料。生长模拟将在下一阶段接入。</p>
+    <p class="muted">
+      保存土壤、品种和天气的版本，再检查这一季的资料。资料补齐后可在“生长计算”运行潜在模式。
+    </p>
     <p v-if="isLoading" class="muted" role="status">正在读取资料…</p>
     <div v-if="error" class="workspace-error" role="alert">
       <span>{{ error }}</span

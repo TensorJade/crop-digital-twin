@@ -1,5 +1,7 @@
 """Start the end-to-end test API on a dedicated migrated temporary SQLite database."""
 
+import subprocess
+import sys
 from pathlib import Path
 from tempfile import gettempdir
 
@@ -43,7 +45,22 @@ def main() -> None:
             )
     finally:
         engine.dispose()
-    uvicorn.run("crop_twin.main:app", host="127.0.0.1", port=8019, proxy_headers=False)
+    worker = subprocess.Popen(
+        [sys.executable, str(root / "scripts/simulation_worker.py")],
+        cwd=root,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+    )
+    try:
+        uvicorn.run("crop_twin.main:app", host="127.0.0.1", port=8019, proxy_headers=False)
+    finally:
+        worker.terminate()
+        try:
+            worker.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            worker.kill()
+            worker.wait()
 
 
 if __name__ == "__main__":

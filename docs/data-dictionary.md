@@ -1,6 +1,6 @@
 # 数据字典与实际迁移
 
-总体目标包含 [20 张规划表](design-baseline/数据字典设计.json)与 [ER 图](diagrams/er_global.svg)。实际版本以 Alembic 0001、0002、0003 与 ORM 为准，当前共十张业务表；规划图中的未来表尚未实施。
+总体目标包含 [20 张规划表](design-baseline/数据字典设计.json)与 [ER 图](diagrams/er_global.svg)。实际版本以 Alembic0001–0004与ORM为准，当前共11张业务表；规划图中的未来表尚未实施。
 
 | 表 | 主键与逻辑关系 | 主要事实 | 约束/索引 |
 |---|---|---|---|
@@ -21,6 +21,14 @@
 
 保存原始亩数，响应派生公顷。标准水量为 mm、肥料产品质量为 kg/ha，不是入渗水或纯氮量。Decimal 响应为字符串，日期为 ISO。时间写入 UTC，SQLite 读回补 UTC。
 
-事务与锁见 [ADR 0002](adr/0002-farm-module.md)、[ADR 0003](adr/0003-identity.md)和 [ADR 0004](adr/0004-simulation-inputs.md)。无业务物理删除接口；绕过应用的 SQL 仍可能破坏关系，需限制运维写权限。农事 is_current 由后继关系派生，原始农事不更新；crop_code=rice 为模块常量。双数据库集成测试执行 Alembic check 检查迁移与 ORM 一致。
+事务与锁见 [ADR 0002](adr/0002-farm-module.md)、[ADR 0003](adr/0003-identity.md)、[ADR0004](adr/0004-simulation-inputs.md)和 [ADR0005](adr/0005-potential-simulation.md)。无业务物理删除接口；绕过应用的 SQL 仍可能破坏关系，需限制运维写权限。农事 is_current 由后继关系派生，原始农事不更新；crop_code=rice 为模块常量。双数据库集成测试执行 Alembic check 检查迁移与 ORM 一致。
 
 输入 payload 有明确土壤/品种/天气结构，天气原始 CSV 和解析日值同时保存；资料最多 512 KiB、CSV 256 KiB/366天、快照 1 MiB。快照持久化地块/季节/三份资料/截止前最新农事/标准天气/报告，原版本不更新。SHA-256 覆盖规范 payload，整数值浮点统一为整数；它不代替数字签名或模型验证。详见 [输入模块](modules/simulation-inputs.md)。
+
+## 0004 计算任务/结果
+
+simulation_runs：UUID id、organization_id、season_id、input_id、request_key、actor_user_id；model_code/engine_version String(32)、input_hash String(64)、status String(16)、attempts Integer；created_at/started_at/finished_at/lease_expires_at UTC、lease_token UUID；error_code String(64)、result JSON(nullable)、result_hash String(64)(nullable)。
+
+组织/request_key唯一，组织/季节/时间/ID分页及状态/租约/时间索引；status限queued/running/succeeded/failed、attempts为0–3，running必须有且仅有租约字段，成功必须有结果/哈希且无错误码。所有关系是应用维护逻辑外键；私有租约字段不出API。结果最多512KiB，摘要列表不返回逐日结果。
+
+任务状态为运营事实可更新，完成结果无修改/删除接口。新UUID表示新计算版本，引用不可变输入ID/哈希；结果规范JSON哈希规则同输入。结果包含实际模型/PCSE/适配/软件版本、日值、天气、条件和标记，不修改旧输入报告。

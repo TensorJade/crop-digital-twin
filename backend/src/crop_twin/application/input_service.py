@@ -18,6 +18,7 @@ from crop_engine.inputs import (
     parse_weather_csv,
     pcse_weather_fields,
 )
+from crop_engine.potential import validate_potential_input
 
 from crop_twin import __version__
 from crop_twin.application.farm_service import FarmService
@@ -172,7 +173,7 @@ class SimulationInputService:
                 "TOO_MANY_MANAGEMENT_EVENTS", "单季有效农事超过 5000 条，请核对后再保存快照"
             )
         included = [event for event in events.items if event.occurred_on <= data.cutoff_date]
-        return {
+        payload = {
             "schema_version": "1.0.0",
             "software_version": __version__,
             "model_target": "WOFOST72",
@@ -202,6 +203,12 @@ class SimulationInputService:
             },
             "report": report,
         }
+        try:
+            validate_potential_input(payload)
+            report["simulation_available"] = True
+        except InputDataError as error:
+            report["warnings"].append(Issue(code="POTENTIAL_INPUT_PENDING", message=str(error)))
+        return payload
 
     def check(self, data: SnapshotInput) -> InputReport:
         """Preview all missing inputs without creating a version or audit."""

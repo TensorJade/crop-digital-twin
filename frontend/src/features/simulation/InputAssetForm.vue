@@ -21,6 +21,8 @@ const latitude = ref('')
 const longitude = ref('')
 const elevation = ref('')
 const timeBasis = ref<'Asia/Shanghai' | 'UTC' | 'LST'>('Asia/Shanghai')
+const angstromA = ref('')
+const angstromB = ref('')
 const file = ref<File | null>(null)
 const error = ref('')
 const isSaving = ref(false)
@@ -62,6 +64,8 @@ async function saveAsset() {
               elevation_m: Number(elevation.value),
               wind_height_m: 2,
               time_basis: timeBasis.value,
+              angstrom_a: angstromA.value ? Number(angstromA.value) : null,
+              angstrom_b: angstromB.value ? Number(angstromB.value) : null,
               csv_text: text,
             }
     }
@@ -207,6 +211,28 @@ async function saveAsset() {
             </select></label
           >
         </div>
+        <details>
+          <summary>模型计算资料（由资料提供者填写）</summary>
+          <p class="muted">运行模型需要蒸散计算系数 A/B。没有依据时留空，补齐后另存资料。</p>
+          <div class="field-pair">
+            <label
+              >蒸散计算系数 A<input
+                v-model="angstromA"
+                type="number"
+                min="0.1"
+                max="0.4"
+                step="any"
+            /></label>
+            <label
+              >蒸散计算系数 B<input
+                v-model="angstromB"
+                type="number"
+                min="0.3"
+                max="0.7"
+                step="any"
+            /></label>
+          </div>
+        </details>
       </template>
     </template>
     <label

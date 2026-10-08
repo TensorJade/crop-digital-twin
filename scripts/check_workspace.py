@@ -30,6 +30,11 @@ REQUIRED = [
     "backend/migrations/versions/0003_simulation_inputs.py",
     "frontend/src/features/simulation/SimulationInputsPanel.vue",
     "docs/modules/simulation-inputs.md",
+    "backend/migrations/versions/0004_simulation_runs.py",
+    "frontend/src/features/simulation/SimulationRunsPanel.vue",
+    "docs/modules/potential-simulation.md",
+    "scripts/simulation_worker.py",
+    "tests/fixtures/potential-input.json",
 ]
 
 
@@ -51,6 +56,7 @@ def main() -> None:
         "/api/v1/input-assets",
         "/api/v1/simulation-inputs/check",
         "/api/v1/simulation-inputs",
+        "/api/v1/simulation-runs",
     }
     if not required_routes <= schema["paths"].keys():
         raise SystemExit("An implemented module route is missing.")

@@ -1,16 +1,16 @@
 # 本地开发运行手册
 
-在仓库根目录执行 bootstrap → init-db → create-admin（交互设置密码）→ 分别启动 API 与前端。用 Ctrl+C 停止自己的进程。默认 SQLite 无需 Docker，没有默认运行账号；完整命令见根 README。
+在仓库根目录执行 bootstrap → init-db → create-admin（交互设置密码）→ 分别启动API、前端与worker。用 Ctrl+C 停止自己的进程。默认 SQLite 无需 Docker，没有默认运行账号；完整命令见根 README。
 
 ## 存储与升级
 
-不使用 .env 时默认 runtime/crop_twin.db。需要自定义时复制 .env.example 为 .env，不覆盖已有 .env。迁移、管理员初始化和 API 脚本读取 CROP_TWIN_DATABASE_URL。
+不使用 .env 时默认 runtime/crop_twin.db。需要自定义时复制 .env.example 为 .env，不覆盖已有 .env。迁移、管理员初始化和 API及worker脚本读取同一CROP_TWIN_DATABASE_URL。
 
 从 M1 升级先运行 init-db。旧地块保持保存，organization_id 为空时不会向用户开放。若确需把全部未归属旧地块归入此次新组织，在 create-admin 命令增加 -AdoptLegacy；没有该标记会拒绝创建且回滚，不自动给第一个用户授权。已有归属不会转移。迁移不要降级或重置真实数据。
 
 PostgreSQL URL 格式：postgresql+psycopg://用户:URL编码后的密码@127.0.0.1:5432/数据库。先创建数据库/用户，或按 infra/README 启动开发 postgres；设置 URL 后 init-db。修改 URL 不搬迁 SQLite 数据，跨库迁移需另行设计验证。
 
-本机 Docker daemon 未运行。CI 使用 PostgreSQL 17；空间扩展留待地图模块。Redis 不参与 M1/M2/M3.1。
+本机 Docker daemon 未运行。CI 使用 PostgreSQL 17；空间扩展留待地图模块。Redis不参与当前模块，计算使用SQL任务表。
 
 从 0.3.0 升级执行 init-db 至 0003，只增加两张输入表，不需重建账号。不得降级运行库来清理输入历史。
 
@@ -24,7 +24,7 @@ PostgreSQL URL 格式：postgresql+psycopg://用户:URL编码后的密码@127.0.
 & .tools\uv\Scripts\uv.exe run --locked python scripts/verify_input.py 'C:\path\to\rice-input.json'
 ```
 
-PASS 仅表示 payload 校验和一致，不表示模型运行、来源认证或精度验证。资料上限 512 KiB，天气 CSV 256 KiB/366 天，快照 1 MiB，核验文件上限 2 MiB。自动站点搜索、天气下载、PCSE 执行尚待 M3.2。
+PASS 仅表示 payload 校验和一致，不表示模型运行、来源认证或精度验证。资料上限 512 KiB，天气 CSV 256 KiB/366 天，快照 1 MiB，核验文件上限 2 MiB。自动站点/联网天气尚待实施。PCSE潜在模式已接通；可下载结果并用同一verify_input.py核验，PASS仍不证明农艺精度。
 
 ## 账户与配置
 
@@ -51,3 +51,13 @@ check-e2e.ps1 占用 8019/5179 并拒绝复用已有服务。e2e_api.py 检查 t
 7. production 启动失败：当前 M7 部署与发布验收未完成。
 
 备份恢复和公开部署未实现；backups/ 目录不代表备份完成。不要随意 docker down -v 或降级真实数据库。
+
+## 0.5.0升级与生长计算
+
+先bootstrap安装锁定科学依赖，再init-db到0004；已有组织/账号继续使用，不修改原输入。第三个终端运行start-worker.ps1，与API同数据库；-Once最多处理一个可领取任务。计算之前在“模拟资料”重新导入补齐系数的天气并保存新快照，历史0.4快照不补写。
+
+天气表单折叠的“模型计算资料”由来源提供者填写Angstrom A/B，两者同时提供，A=0.1–0.4、B=0.3–0.7、和=0.6–0.9。仅直播已出苗、连续北京时间已发生天气与完整品种参数可计算，最多366日。进入“生长计算”选可运行快照、明确确认潜在模式后排队。日期滑块、指标曲线、历史及JSON导出供所有本组织成员查看。
+
+排队未变化：检查worker终端是否运行、同库、已迁移。运行中断：启动worker，120s租约到期后可重新领取，最多三次。确定失败：核对页面安全提示，必要时修改资料保存新快照，重新计算保留旧记录。不要直接改SQL状态/哈希/租约。输入simulation_available只表示输入条件，不是worker存活检查。
+
+计算假定水肥充足，真实农事灌排/施肥尚无效应；移栽暂拒绝。不用合成验收品种生产决策，贮藏器官干物质不当作实收产量。模型精度与软件通过分别验收。

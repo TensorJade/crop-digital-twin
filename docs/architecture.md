@@ -1,40 +1,29 @@
 # 产品与实现架构
 
-逻辑架构为模块化后端 + 独立算法包 + Vue Web 客户端。早期不拆大量微服务；未来重计算在独立 worker 进程运行。
+当前采用模块化 FastAPI 后端、Vue Web 前端、独立算法包和 SQL worker。API 负责授权和快速提交，计算在独立进程执行；本地 SQLite、服务器 PostgreSQL 为唯一业务事实来源，无需 Redis。
 
-```mermaid
+~~~mermaid
 flowchart LR
-    U[农田管理人员] --> WEB[Vue / TypeScript]
-    WEB --> API[FastAPI 接口]
-    API --> APP[业务用例与领域]
-    APP --> DB[(PostgreSQL / PostGIS)]
-    APP --> Q[任务调度 / Redis]
-    Q --> W[Python Worker]
-    W --> E[PCSE 适配 / 遥感 / 校准]
-    W --> DB
-    W --> O[(影像对象存储)]
-    WEATHER[天气服务] --> W
-    MAP[授权卫星底图] --> WEB
-```
+  U[农田管理人员] --> WEB[Vue / TypeScript]
+  WEB --> API[FastAPI / 会话 / 角色 / CSRF]
+  API --> APP[农田 / 账户 / 输入 / 计算用例]
+  APP --> DB[(SQLite / PostgreSQL)]
+  APP --> CHECK[crop_engine 静态检查]
+  DB --> W[Python worker：短事务领取]
+  W --> P[临时子进程：PCSE6.0.13]
+  P --> W
+  W --> DB
+  DB --> API
+~~~
 
-上图是目标结构。当前 M1/M2/M3.1 已覆盖 Vue 登录/农田/成员/输入页面 → FastAPI 授权入口 → FarmService、IdentityService、SimulationInputService → SQLAlchemy → SQLite/PostgreSQL。输入服务另调用纯 crop_engine 校验/单位转换；Q、W、实际模型、联网天气、地图和对象存储未实现。本地默认 SQLite，Redis 暂不接入。
+已实现 M1/M2/M3.1 与 M3.2 潜在计算：输入封存 → SQL 排队 → 独立 worker → 真实 Wofost72_PP → 版本化逐日结果 → 曲线/日期/导出。API 不导入 PCSE 或执行重计算，算法不读 HTTP 或应用数据库。天气提供器来自离线导入，自动站点/联网天气、授权卫星底图/空间扩展、影像对象存储和遥感校准仍待实施。初始目标图保存在 docs/diagrams，与当前实现分别维护。
 
-实际数据流见 [M1](modules/farm-management.md)、[M2](modules/identity.md)和 [M3.1](modules/simulation-inputs.md)。前端 farm、identity、simulation 各自集中组件与状态，后端对应领域与应用模块；共用分页/HTTP 不依赖业务模块。权限在 API 与限定组织的 SQL 查询边界强制检查。
+实际数据流见 [农田](modules/farm-management.md)、[账户](modules/identity.md)、[输入](modules/simulation-inputs.md)和 [计算](modules/potential-simulation.md)。前端各功能集中组件、类型和 API；后端接口负责校验/授权，用例负责事务与幂等，领域无框架依赖，存储适配负责组织范围 SQL，共用 HTTP/分页不反向依赖业务。
 
-M2 使用 SQL 会话与角色，不引入 JWT/Redis。密码经 Argon2id 哈希，随机会话 Cookie 的摘要存 SQL；CSRF 绑定会话，前端仅内存持有。业务和审计同事务，停用/改密码撤销会话。组织内共享地块，尚无逐成员地块权限。旧地块保留到明确初始化接收，不自动给首次登录者授权。依据见 [ADR 0003](adr/0003-identity.md)。
+账户使用 Argon2id、可撤销 SQL 会话、HttpOnly Cookie 和内存 CSRF，无 JWT/Redis。组织内共享地块，跨组织资源返回404。写操作与审计同事务；停用/改密码撤销会话。旧地块接收须显式初始化，不自动归属首次登录者。见 [ADR0003](adr/0003-identity.md)。
 
-业务主数据以 SQL 为权威来源；Redis 不承载唯一业务事实；大影像采用对象存储，SQL 保存路径、版本、校验和和来源。已实现的模拟输入快照与管理修订历史只追加；未来原始预测、遥感观测与校准结果也分别留存。M3.1 用两张 SQL 表保存明确类型的资料和封存快照，不引入通用资产平台。依据见 [ADR0004](adr/0004-simulation-inputs.md)。
+资料、输入快照和历史结果只追加，农事修正保留原版本。一张 simulation_runs 同时保存有界任务与结果，组织/request_key 去重；领取用短事务和租约令牌，计算期间无 SQL 写锁，迟到 worker 不能覆盖新租约。过期任务最多领取三次，确定失败须新建计算；任务/结果状态与审计一致。无 worker 时持久排队，重启后可恢复。见 [ADR0004](adr/0004-simulation-inputs.md)、[ADR0005](adr/0005-potential-simulation.md)。
 
-重计算目标流程：API 校验并记录任务 → worker 取不可变快照 → 运行模型或影像流程 → 保存版本化结果 → 更新任务状态 → 前端查询。任务幂等、失败重试、租约恢复和权限需在业务实现阶段验证。
+PCSE 固定版本，仅在隔离临时目录/环境中导入，阻止默认用户配置/演示数据库参与业务。不携带应用数据库或账户秘密，不下载外部参数/天气，不执行用户脚本。模型只支持直播已出苗的潜在生产条件；冻结的农事供追踪，尚无灌排/施肥响应。软件可执行性与农艺适用性分别验证。
 
-设计图来源：`docs/diagrams/` 的架构、上下文/一级/遥感数据流图、ER 图、任务序列图。详细方案源文件在 `docs/design-baseline/design.json`。
-
-## 模块边界
-
-- API 层负责请求响应、认证/权限入口与错误映射。
-- application 层负责用例、快照、事务、幂等与任务提交。
-- domain 层负责不依赖框架的农业业务规则。
-- infrastructure 层实现存储、天气与消息适配。
-- crop_engine 只接受算法数据契约；不直接读 UI、HTTP 请求或数据库。
-
-M1 引入 SQLAlchemy、Alembic、Psycopg 和 Playwright；M2 仅增加 argon2-cffi 密码依赖。农业、GIS 与队列依赖按需要引入。production 启动保护保留到 M7；部署、容量和 SLA 以试点测量为准，不以功能测试推断。
+后续影像在对象存储保留原始文件，SQL 保存来源、版本和校验和；遥感观测、未更新预测、校准结果分别留存。Redis 仅在实测容量或协调需要时引入。production 启动保护保留到 M7；部署、备份恢复、容量与 SLA 需试点验收。

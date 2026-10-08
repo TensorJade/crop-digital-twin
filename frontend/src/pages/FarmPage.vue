@@ -5,6 +5,7 @@ import PlotPanel from '../features/farm/PlotPanel.vue'
 import SeasonPanel from '../features/farm/SeasonPanel.vue'
 import ManagementPanel from '../features/farm/ManagementPanel.vue'
 import SimulationInputsPanel from '../features/simulation/SimulationInputsPanel.vue'
+import SimulationRunsPanel from '../features/simulation/SimulationRunsPanel.vue'
 import { useFarmWorkspace } from '../features/farm/useFarmWorkspace'
 
 const props = defineProps<{ identity: Identity }>()
@@ -25,7 +26,7 @@ const {
   selectPlot,
   seasonSaved,
 } = useFarmWorkspace()
-const seasonView = ref<'management' | 'inputs'>('management')
+const seasonView = ref<'management' | 'inputs' | 'runs'>('management')
 watch(selectedSeasonId, () => {
   seasonView.value = 'management'
 })
@@ -85,6 +86,13 @@ watch(selectedSeasonId, () => {
               >
                 模拟资料
               </button>
+              <button
+                type="button"
+                :aria-pressed="seasonView === 'runs'"
+                @click="seasonView = 'runs'"
+              >
+                生长计算
+              </button>
             </nav>
             <ManagementPanel
               v-if="seasonView === 'management'"
@@ -93,10 +101,16 @@ watch(selectedSeasonId, () => {
               :can-manage="canManage"
             />
             <SimulationInputsPanel
-              v-else
+              v-else-if="seasonView === 'inputs'"
               :key="selectedSeason.id"
               :season="selectedSeason"
               :plot="selectedPlot"
+              :can-manage="canManage"
+            />
+            <SimulationRunsPanel
+              v-else
+              :key="selectedSeason.id"
+              :season="selectedSeason"
               :can-manage="canManage"
             />
           </template>
@@ -120,7 +134,7 @@ watch(selectedSeasonId, () => {
       </div>
     </main>
     <footer class="workspace-footer">
-      当前支持农田记录和模拟输入资料。生长计算、地图和遥感将按模块接入。
+      当前支持农田记录、模拟资料与潜在生长计算。地图和遥感将按模块接入。
     </footer>
   </div>
 </template>

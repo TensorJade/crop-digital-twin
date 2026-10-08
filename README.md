@@ -1,78 +1,89 @@
 # 作物数字孪生系统 · 华南水稻
 
-本地开发路径：`D:\Dev\软著\crop-digital-twin`。前端使用 Vue + TypeScript，后端使用 Python + FastAPI，科学计算保留独立的 PCSE/WOFOST 适配包。
+本地开发路径：D:/Dev/软著/crop-digital-twin。Vue + TypeScript 前端、Python + FastAPI 后端，独立 Python 算法包复用 PCSE/WOFOST。
 
-当前版本 **0.4.0** 已完成 M1 农田、M2 账户授权和 M3.1 模拟输入：登录后选地块/种植季，在“农事记录”管理农田，在“模拟资料”登记土壤、导入品种参数和天气、检查并保存/下载输入快照。页面支持桌面与手机。实际生长模型、自动天气获取、卫星地图和无人机校准仍需后续模块；公开发布还需 M7 验收。
+当前版本 **0.5.0** 可完成登录 → 农田/种植季/农事 → 导入土壤、品种参数、天气 → 保存输入快照 → 排队计算 → 查看逐日长势、历史和下载。真实 PCSE6.0.13 Wofost72_PP 已接入，支持直播出苗后的潜在生产计算，假定水肥充足；灌排、施肥效应、移栽水田适配和当地精度尚未验证。自动天气获取、卫星地图、无人机校准与公开发布按模块继续实施。
 
 ## 实施原则
 
-- 一个模块化后端、一套前端。农田、账户、输入各自集中业务，HTTP、业务规则、纯数值检查和 SQL 分层。
-- 默认本地 SQLite，服务器目标 PostgreSQL；Redis 等异步计算需要时再接入。
-- 组织内共享地块。管理员管理成员，农田管理成员可写，只读成员仅查看；跨组织资源不可访问。
-- 修正农事新增版本；操作与审计同事务，失败一起回滚。
-- 已确认首版为华南水稻，尚无具体试点县市、模型品种参数或农艺精度结论。
+- 一个模块化后端、一套前端，按农田、账户、输入/计算组织业务；接口、用例、领域、SQL 与算法分层。
+- 默认本地 SQLite，服务器支持 PostgreSQL；一个 SQL 任务/结果表与独立 worker，无需 Redis/Celery。
+- 组织内共享农田；管理员管理成员，农田管理成员可写，只读成员可查看与下载，后端强制组织/角色/CSRF 校验。
+- 农事修正、输入和结果保留版本，业务与审计同事务；计算不占用 HTTP 或数据库写事务。
+- 不提供猜测的华南品种参数或天气；合成资料仅供隔离的软件验收。
 
-见 [模块路线](docs/module-roadmap.md)、[实际进度](docs/progress.md)、[需求追踪](docs/requirements.md)、[M1 数据流](docs/modules/farm-management.md)、[M2 数据流](docs/modules/identity.md)和 [M3.1 输入数据流](docs/modules/simulation-inputs.md)。`docs/design-baseline/` 中的完整目标不代表已实现能力。
+见 [模块路线](docs/module-roadmap.md)、[实际进度](docs/progress.md)、[需求追踪](docs/requirements.md)、[输入数据流](docs/modules/simulation-inputs.md)与 [计算数据流](docs/modules/potential-simulation.md)。docs/design-baseline 中的完整目标不代表已实现能力。
 
 ## 安装与启动
 
-使用 Python 3.12、Node.js 24.19.0、Git。脚本支持 Windows PowerShell 5.1 和 PowerShell 7，安装访问 PyPI/npm。
+使用 Python 3.12、Node.js 24.19.0、Git。脚本支持 Windows PowerShell 5.1/7，安装需访问 PyPI/npm。
 
-```powershell
-Set-Location 'D:\Dev\软著\crop-digital-twin'
-.\scripts\bootstrap.ps1
-.\scripts\init-db.ps1
-.\scripts\create-admin.ps1 -Username 'farm_admin' -DisplayName '管理员' -Organization '我的水稻农场'
-```
+~~~powershell
+Set-Location 'D:/Dev/软著/crop-digital-twin'
+./scripts/bootstrap.ps1
+./scripts/init-db.ps1
+./scripts/create-admin.ps1 -Username 'farm_admin' -DisplayName '管理员' -Organization '我的水稻农场'
+~~~
 
-初始化运行 Alembic 增量迁移，默认数据库为 `runtime/crop_twin.db`，无需 Docker/Redis。API 启动不自动建表。管理员脚本交互输入两次 12–128 字符的密码，不显示密码；没有默认账号或密码，不把密码写入命令行。
+初始化执行 Alembic 增量迁移，默认数据库为 runtime/crop_twin.db，不重置原数据。API/worker 启动不自动建表。管理员脚本交互输入两次 12–128 字符密码，不显示或写入命令行；已有组织/账号无需重复初始化。
 
-**从 0.3.0 升级**：执行 init-db 增量迁移到 0003，已有组织/账号继续使用。在本季“模拟资料”导入来源明确的资料；不创建默认模型参数。
+**从 0.4.0 升级**：重新 bootstrap 安装锁定 PCSE 依赖，然后 init-db 至 0004。旧资料/快照保持不变；需由资料提供者补充天气 Angstrom A/B 系数，重新导入天气并保存新快照，才能运行计算。
 
-**从 0.2.0 升级**：先执行 init-db。旧地块原样保存但不会自动授权；确需将全部未归属旧地块接收到新组织时，创建管理员命令显式增加 `-AdoptLegacy`。脚本会记录接收审计，已有归属不转移。已有组织的管理员不需要重复创建。
+**从 0.3.0 升级**：同样执行 bootstrap、init-db；导入有来源与许可的土壤/品种/天气，不创建默认模型参数。
 
-若合适的 Node 不在 PATH，可向 npm 相关脚本传入 `-NodeBinDirectory 'C:\path\to\node\bin'`。本机路径存于忽略的 `.tools/local-settings.json`，不修改全局配置。
+**从 0.2.0 升级**：迁移保留旧地块。确需将全部未归属地块接收到新组织时，创建管理员命令显式增加 -AdoptLegacy；接收有审计，已有归属不转移。
 
-分别在两个终端运行：
+若 Node 不在 PATH，npm 脚本可传 -NodeBinDirectory 'C:/path/to/node/bin'，路径保存在忽略的 .tools/local-settings.json，不修改全局配置。
 
-```powershell
-.\scripts\start-api.ps1
-.\scripts\start-frontend.ps1
-```
+分别在三个终端运行：
 
-前端：`http://127.0.0.1:5173`；API 文档：`http://127.0.0.1:8000/docs`。Vite 将 /api 代理到本机 API。登录后录入；管理员可在“成员与记录”创建农田管理或只读账号。所有成员可改自己的密码，修改后须重新登录。
+~~~powershell
+./scripts/start-api.ps1
+./scripts/start-frontend.ps1
+./scripts/start-worker.ps1
+~~~
 
-启动脚本绑定回环地址；production 模式在 M7 部署验收前继续拒绝启动。账户功能不代表完整生产发布完成。
+前端 http://127.0.0.1:5173，API 文档 http://127.0.0.1:8000/docs；Vite 代理 /api。worker 与 API 使用相同数据库配置，缺少 worker 的任务会保持排队。一次性处理可用 start-worker.ps1 -Once。
+
+## 计算需要什么
+
+1. 本组织地块与水稻直播种植季，明确实际出苗日、已发生的截止日。
+2. 农艺人员提供的完整 rice/WOFOST72 品种参数 JSON，声明来源、许可、品种和适用区域。
+3. 土壤体积含水率与深度；连续逐日天气 CSV，注明来源位置/海拔、北京时间日界、2m 风速和单位。
+4. 天气资料提供者填写 Angstrom A/B 系数（同时提供，不猜测默认值）。
+5. “模拟资料”检查并保存快照；进入“生长计算”，选可运行快照，确认潜在模式后开始。
+
+页面显示 LAI、发育进度、地上部/贮藏器官干物质，支持曲线、日期滑块、历史、逐日表和 JSON 下载。贮藏器官干物质不能直接当作实收稻谷产量。输入的 simulation_executed 始终为 false；真正完成计算的结果为 true，agronomically_validated 为 false。
 
 ## 检查与维护
 
-```powershell
-.\scripts\check.ps1
-# 本机 Edge：独立服务、临时数据库和测试账号，均不使用运行数据库
-.\scripts\check-e2e.ps1 -BrowserChannel msedge
-.\scripts\new-dev-log.ps1 -Slug '模块主题' -Author '开发者姓名'
-```
+~~~powershell
+./scripts/check.ps1
+./scripts/check-e2e.ps1 -BrowserChannel msedge
+./scripts/new-dev-log.ps1 -Slug '模块主题' -Author '开发者姓名'
+~~~
 
-无 Edge 的机器可在 frontend 安装 Playwright Chromium 后执行 `npm run test:e2e`。GitHub Actions 使用真实 PostgreSQL 17 与 Chromium；验证结果见 [M1 日志](docs/dev-log/2026-10-08-farm-management.md)、[M2 日志](docs/dev-log/2026-10-08-identity.md)和 [M3.1 日志](docs/dev-log/2026-10-08-simulation-inputs.md)。软件测试不作为模型准确性证据。
+浏览器验收使用独立服务、临时数据库、测试账号和真实 worker，不使用运行数据库。无 Edge 可在 frontend 安装 Playwright Chromium 后 npm run test:e2e。GitHub Actions 验证 PostgreSQL17/SQLite 和 Chromium。检查结果见 [M3.2 日志](docs/dev-log/2026-10-08-potential-simulation.md)，软件测试不作为模型精度证据。
 
-PostgreSQL 配置、测试隔离与账户故障处理见 [运行手册](docs/runbooks/local-development.md)。生产备份、账号找回、逐成员地块授权和公开部署尚未交付。
+运行升级、参数、排队故障与离线校验见 [运行手册](docs/runbooks/local-development.md)。脚本绑定回环地址，production 保护保留到 M7；备份恢复、公开部署与账号找回仍待交付。
 
 ## 目录与 Git
 
-```text
+~~~text
 crop-digital-twin/
-├─ frontend/src/features/       # farm、identity、simulation：组件/类型/API
-├─ backend/src/crop_twin/        # API、领域、应用服务与存储/密码适配
-├─ backend/migrations/           # 0001 农田、0002 账户、0003 输入快照
-├─ packages/crop_engine/         # 纯输入检查/单位转换；实际 PCSE 待接入
-├─ contracts/                   # 26 个真实 GET/POST 操作的 OpenAPI
-├─ docs/                        # 需求、架构、ADR、数据流和开发日志
-├─ scripts/                     # 安装、迁移、管理员初始化、启动与检查
-├─ infra/                       # 数据库 Compose 和未来运维配置
-├─ frontend/tests/              # 单元和 Playwright 验收
-└─ backend/tests/               # API、迁移、故障、双数据库与并发测试
-```
+├─ frontend/src/features/       # farm、identity、simulation：组件/类型/API/曲线
+├─ backend/src/crop_twin/       # API、领域、应用、SQL 与独立 worker
+├─ backend/migrations/          # 0001 农田、0002 账户、0003 输入、0004 计算
+├─ packages/crop_engine/        # 纯输入检查 + 隔离 PCSE 潜在模型
+├─ contracts/                  # 29 个真实 GET/POST 操作的 OpenAPI
+├─ docs/                       # 需求、架构、ADR、数据流和实际开发日志
+├─ scripts/                    # 安装、迁移、账户、启动、worker 和检查
+├─ infra/                      # 开发数据库与后续运维配置
+├─ tests/fixtures/             # 自有合成资料，仅软件验收
+├─ frontend/tests/             # 单元与 Playwright
+└─ backend/tests/              # API、迁移、故障、双数据库与并发
+~~~
 
-详细语言与目录见 [目录说明](docs/directory-structure.md)。数据库、真实 .env、影像、依赖、运行输出和备份忽略版本控制。代码与日志同步至 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)，本模块分支为 `codex/feature_simulation_inputs_20261008`。协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+详细语言与目录见 [目录说明](docs/directory-structure.md)，PCSE 版本、来源和许可见 [第三方清单](THIRD_PARTY.md)。数据库、.env、影像、依赖、输出和备份不进入 Git。当前功能分支 codex/feature_pcse_20261008，代码与日志同步至 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)；协作见 [CONTRIBUTING](CONTRIBUTING.md)。
 
-下一步为 M3.2 真实 PCSE 引擎与天气源适配。M3.1 的 input_ready 仅表示静态完整性，模型尚未运行。原有 `..\wofost_lai_edge` 保持独立；复用前核对许可、参数来源、水田过程和实测验证。
+下一步补充授权天气源/站点适配、移栽水田条件与当地实测验证。相邻 wofost_lai_edge 保持独立，复用前核对来源、许可和真实能力。

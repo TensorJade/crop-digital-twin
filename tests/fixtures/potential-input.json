@@ -1,0 +1,320 @@
+{
+  "schema_version": "1.0.0",
+  "season": {
+    "establishment_method": "direct_sowing",
+    "variety_name": "软件验收合成品种（未校准）"
+  },
+  "period": {
+    "emergence_date": "2026-03-02",
+    "cutoff_date": "2026-03-16"
+  },
+  "assets": {
+    "crop": {
+      "payload": {
+        "crop_code": "rice",
+        "model_code": "WOFOST72",
+        "variety_name": "软件验收合成品种（未校准）",
+        "applicable_region": "仅测试，不可用于农田决策",
+        "parameters": {
+          "CVL": 0.7,
+          "CVO": 0.7,
+          "CVR": 0.7,
+          "CVS": 0.7,
+          "Q10": 2,
+          "RML": 0.03,
+          "RMO": 0.01,
+          "RMR": 0.015,
+          "RMS": 0.01,
+          "CFET": 1,
+          "CRAIRC": 0.1,
+          "DEPNR": 3,
+          "IAIRDU": 1,
+          "IOX": 0,
+          "PERDL": 0.03,
+          "RGRLAI": 0.02,
+          "SPAN": 35,
+          "TBASE": 8,
+          "TDWI": 20,
+          "RDI": 10,
+          "RDMCR": 100,
+          "RRI": 1.2,
+          "SPA": 0,
+          "DLC": 0,
+          "DLO": 0,
+          "DVSEND": 2,
+          "DVSI": 0,
+          "IDSL": 0,
+          "TBASEM": 10,
+          "TEFFMX": 30,
+          "TSUM1": 800,
+          "TSUM2": 600,
+          "TSUMEM": 90,
+          "AMAXTB": [
+            0,
+            25,
+            2,
+            15
+          ],
+          "EFFTB": [
+            0,
+            0.45,
+            40,
+            0.45
+          ],
+          "KDIFTB": [
+            0,
+            0.6,
+            2,
+            0.6
+          ],
+          "TMNFTB": [
+            0,
+            0,
+            10,
+            1,
+            40,
+            1
+          ],
+          "TMPFTB": [
+            0,
+            0,
+            15,
+            1,
+            40,
+            0.5
+          ],
+          "RFSETB": [
+            0,
+            1,
+            2,
+            1
+          ],
+          "FLTB": [
+            0,
+            0.6,
+            1,
+            0.3,
+            2,
+            0
+          ],
+          "FOTB": [
+            0,
+            0,
+            1,
+            0.4,
+            2,
+            1
+          ],
+          "FRTB": [
+            0,
+            0.2,
+            2,
+            0.1
+          ],
+          "FSTB": [
+            0,
+            0.4,
+            1,
+            0.3,
+            2,
+            0
+          ],
+          "SLATB": [
+            0,
+            0.02,
+            2,
+            0.02
+          ],
+          "RDRSTB": [
+            0,
+            0,
+            1,
+            0.01,
+            2,
+            0.03
+          ],
+          "SSATB": [
+            0,
+            0.005,
+            2,
+            0.005
+          ],
+          "RDRRTB": [
+            0,
+            0,
+            2,
+            0.01
+          ],
+          "DTSMTB": [
+            0,
+            0,
+            10,
+            0,
+            30,
+            20,
+            40,
+            20
+          ]
+        }
+      }
+    },
+    "weather": {
+      "payload": {
+        "source_kind": "station",
+        "station_id": "TEST-ONLY",
+        "latitude": 23.1,
+        "longitude": 113.2,
+        "elevation_m": 10,
+        "time_basis": "Asia/Shanghai",
+        "wind_height_m": 2,
+        "angstrom_a": 0.29,
+        "angstrom_b": 0.49,
+        "days": [
+          {
+            "date": "2026-03-02",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-03",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-04",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-05",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-06",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-07",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-08",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-09",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-10",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-11",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-12",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-13",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-14",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-15",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          },
+          {
+            "date": "2026-03-16",
+            "tmin_c": 20,
+            "tmax_c": 30,
+            "rain_mm": 10,
+            "radiation_mj_m2": 15,
+            "wind_m_s": 2,
+            "vapor_kpa": 1.5
+          }
+        ]
+      }
+    }
+  },
+  "pcse_fields": {
+    "soil": {
+      "SMW": 0.1,
+      "SMFCF": 0.3,
+      "SM0": 0.5,
+      "RDMSOL": 100
+    }
+  }
+}
