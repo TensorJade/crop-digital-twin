@@ -57,7 +57,11 @@
 
 ## Git 与远程验证
 
-实现提交7631c73c2d50af0718791f72044279509f836b37已推送。首次[CI运行37782416824](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782416824)的前端22项单元/13条Chromium流程通过（29.3s），Python在Linux的mypy步骤失败，后端测试尚未执行。Linux不识别条件表达式中的Windows专用subprocess.CREATE_NO_WINDOW；Windows本地检查通过，Linux平台本地复现同一错误。改为显式sys.platform分支，本地两平台类型检查均通过；CI增加Windows、本地check增加Linux检查。修正后生长流程重测时首次未选择Edge，本机没有Chromium而无法启动浏览器，随后明确使用已安装Edge复核。新提交的双数据库/浏览器验证待核验。当前未合并保护分支、未公开部署，无指定人工审查者；不把工具检查称为人工审核。
+实现提交7631c73c2d50af0718791f72044279509f836b37已推送。首次[CI运行37782416824](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782416824)的前端22项单元/13条Chromium流程通过（29.3s），Python在Linux的mypy步骤失败，后端测试尚未执行。Linux不识别条件表达式中的Windows专用subprocess.CREATE_NO_WINDOW；Windows本地检查通过，Linux平台本地复现同一错误。改为显式sys.platform分支，本地两平台类型检查均通过；CI增加Windows、本地check增加Linux检查。修正后生长流程重测时首次未选择Edge，本机没有Chromium而无法启动浏览器，随后明确使用已安装Edge，两条流程通过（12.3s）。
+
+修正提交2a1ca91bb08c9ab326448350fe8d8bc4642ba348已推送，[CI运行37782900218](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782900218)的headSha与提交一致，整体及两个任务均success，于2026-10-08 21:19（北京时间）核验。真实PostgreSQL17/SQLite共216项全部通过、无跳过（128.71s），合并覆盖率95.01%；Windows/Linux mypy均61文件通过、Ruff/格式/契约/30项目录检查通过。前端22项单元、构建与13条Chromium流程通过（29.0s）。
+
+远程验证涵盖真实模型日值、双数据库并发/幂等/租约和审计恢复；本机PG仍未运行，以CI补验服务器数据库。当前未合并保护分支、未公开部署，远程无release目标分支、无指定人工审查者；不把工具检查称为人工审核。本文件/progress/协作说明在后续文档提交同步，提交编号可查Git日志。
 
 ## 下一步
 

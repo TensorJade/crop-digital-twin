@@ -43,7 +43,7 @@ scripts/                    # PowerShell 入口 + Python 迁移/管理员/核验
 | 领域对象与规则 | backend/src/crop_twin/domain | Python | 无 HTTP/ORM 依赖 |
 | SQL、密码与配置 | infrastructure、core | Python | SQLite/PostgreSQL、Argon2id |
 | 数据迁移 | backend/migrations、alembic.ini | Python、SQL、INI | 四个增量迁移，11张业务表 |
-| 输入检查与后续科学计算 | packages/crop_engine | Python | inputs纯检查；potential/pcse_runner实际隔离潜在模型 |
+| 输入检查与潜在生长计算 | packages/crop_engine | Python | inputs纯检查；potential/pcse_runner实际隔离潜在模型 |
 | 地图与外部适配 | maps、weather、object_store、messaging | TypeScript / Python | 预留 |
 | 接口契约 | contracts | JSON、YAML | 22条路径、29个GET/POST操作 |
 | 后端测试 | backend/tests | Python | 单元/双数据库/迁移/并发 |
