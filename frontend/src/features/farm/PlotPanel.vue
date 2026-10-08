@@ -5,7 +5,12 @@ import { createPlot } from './api'
 import { displayQuantity } from './types'
 import type { Page, Plot } from './types'
 
-defineProps<{ plots: Page<Plot> | null; selectedId: string | null; isLoading: boolean }>()
+defineProps<{
+  plots: Page<Plot> | null
+  selectedId: string | null
+  isLoading: boolean
+  canManage: boolean
+}>()
 const emit = defineEmits<{
   select: [id: string]
   created: [plot: Plot]
@@ -52,7 +57,7 @@ async function savePlot() {
         <h2 id="plots-title">选择地块</h2>
       </div>
       <button
-        v-if="plots?.total !== 0"
+        v-if="canManage && plots?.total !== 0"
         type="button"
         class="text-button"
         :disabled="isSaving"
@@ -77,7 +82,9 @@ async function savePlot() {
         <small>纬度 {{ plot.latitude.toFixed(4) }} · 经度 {{ plot.longitude.toFixed(4) }}</small>
       </button>
     </div>
-    <p v-else-if="plots" class="empty-guidance">先登记第一块田，再建立它的种植季。</p>
+    <p v-else-if="plots" class="empty-guidance">
+      {{ canManage ? '先登记第一块田，再建立它的种植季。' : '还没有地块，请联系管理员登记。' }}
+    </p>
     <PageNavigation
       v-if="plots"
       v-bind="plots"
@@ -85,7 +92,7 @@ async function savePlot() {
       @navigate="emit('navigate', $event)"
     />
     <form
-      v-if="isAdding || plots?.total === 0"
+      v-if="canManage && (isAdding || plots?.total === 0)"
       class="entry-form compact-form"
       @submit.prevent="savePlot"
     >

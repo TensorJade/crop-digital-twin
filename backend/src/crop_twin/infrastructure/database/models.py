@@ -21,6 +21,7 @@ class PlotRecord(Base):
         CheckConstraint("latitude BETWEEN -90 AND 90", name="ck_plots_latitude"),
         CheckConstraint("longitude BETWEEN -180 AND 180", name="ck_plots_longitude"),
         Index("idx_plots_created_at", "created_at", "id"),
+        Index("idx_plots_organization_id", "organization_id", "created_at", "id"),
     )
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     name: Mapped[str] = mapped_column(String(80))
@@ -28,6 +29,7 @@ class PlotRecord(Base):
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    organization_id: Mapped[UUID | None] = mapped_column(Uuid)
 
 
 class SeasonRecord(Base):

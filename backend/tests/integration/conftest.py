@@ -1,20 +1,25 @@
 """Isolated migrated databases: local SQLite and opt-in PostgreSQL CI schemas."""
 
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from crop_twin.application.identity_service import IdentityService
 from crop_twin.core.settings import Settings
+from crop_twin.domain.identity.models import User
+from crop_twin.infrastructure.database.identity_repository import SqlIdentityRepository
 from crop_twin.infrastructure.database.session import build_engine
+from crop_twin.infrastructure.passwords import Argon2Passwords
 from crop_twin.main import create_app
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -57,9 +62,49 @@ def database_url(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[str
 
 
 @pytest.fixture
-def client(database_url: str) -> Iterator[TestClient]:
+def make_owner(database_url: str) -> Iterator[Callable[[str, str], User]]:
+    """Create explicit owners in an isolated test database, never the runtime database."""
+    engine = build_engine(database_url)
+    passwords = Argon2Passwords()
+
+    def create(username: str, organization_name: str) -> User:
+        with Session(engine) as session, session.begin():
+            user, _ = IdentityService(SqlIdentityRepository(session), passwords).bootstrap(
+                username, username, "integration-test-passphrase", organization_name
+            )
+            return user
+
+    try:
+        yield create
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture
+def owner_user(make_owner: Callable[[str, str], User]) -> User:
+    """The test farm administrator used by M1 regressions."""
+    return make_owner("test_owner", "测试水稻组")
+
+
+@pytest.fixture
+def anonymous_client(database_url: str) -> Iterator[TestClient]:
     """Exercise the real API, SQL adapter and migrations in an isolated database."""
     with TestClient(
         create_app(Settings(environment="test", database_url=SecretStr(database_url)))
     ) as api:
         yield api
+
+
+@pytest.fixture
+def client(anonymous_client: TestClient, owner_user: User) -> TestClient:
+    """M1 behavior continues behind a real login and real CSRF header."""
+    response = anonymous_client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": owner_user.username,
+            "password": "integration-test-passphrase",
+        },
+    )
+    assert response.status_code == 200
+    anonymous_client.headers["X-CSRF-Token"] = response.json()["csrf_token"]
+    return anonymous_client

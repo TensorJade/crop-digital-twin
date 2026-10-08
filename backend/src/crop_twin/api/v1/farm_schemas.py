@@ -7,6 +7,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from crop_twin.api.v1.schemas import ErrorResponse as ErrorResponse
+from crop_twin.api.v1.schemas import OutputModel
+from crop_twin.api.v1.schemas import PageResponse as PageResponse
 from crop_twin.domain.farm.models import EstablishmentMethod, EventType, InputUnit
 
 PositiveQuantity = Annotated[Decimal, Field(gt=0, le=1_000_000, decimal_places=6)]
@@ -66,16 +69,11 @@ class EventCorrection(EventFields):
     correction_reason: str = Field(min_length=1, max_length=240)
 
 
-class OutputModel(BaseModel):
-    """Serialize immutable application records, including exact decimal strings."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class PlotResponse(OutputModel):
     """Reported plot facts and derived hectares."""
 
     id: UUID
+    organization_id: UUID
     name: str
     area_mu: Decimal
     area_ha: Decimal
@@ -115,25 +113,3 @@ class EventResponse(OutputModel):
     replaces_event_id: UUID | None
     correction_reason: str | None
     is_current: bool
-
-
-class PageResponse[T](OutputModel):
-    """Bounded collection response with total count and navigation information."""
-
-    items: list[T]
-    total: int
-    limit: int
-    offset: int
-
-
-class ErrorDetail(BaseModel):
-    """Safe business/storage error, without SQL or credential exposure."""
-
-    code: str
-    message: str
-
-
-class ErrorResponse(BaseModel):
-    """Shared documented error response for M1 routes."""
-
-    detail: ErrorDetail

@@ -29,8 +29,9 @@ from crop_twin.domain.farm.rules import (
 class FarmService:
     """Coordinate farm rules and persistence without depending on API or SQLAlchemy."""
 
-    def __init__(self, repository: FarmRepository) -> None:
+    def __init__(self, repository: FarmRepository, organization_id: UUID) -> None:
         self.repository = repository
+        self.organization_id = organization_id
 
     def get_plot(self, plot_id: UUID, *, lock: bool = False) -> Plot:
         """Read a plot or raise a safe not-found error."""
@@ -49,8 +50,10 @@ class FarmService:
             data.latitude,
             data.longitude,
             datetime.now(UTC),
+            self.organization_id,
         )
         self.repository.add_plot(plot)
+        self.repository.record_audit("farm.plot_created", "plot", plot.id)
         return plot
 
     def list_plots(self, limit: int, offset: int) -> Page[Plot]:
@@ -83,6 +86,7 @@ class FarmService:
             datetime.now(UTC),
         )
         self.repository.add_season(season)
+        self.repository.record_audit("farm.season_created", "season", season.id)
         return season
 
     def list_seasons(self, plot_id: UUID, limit: int, offset: int) -> Page[Season]:
@@ -103,6 +107,7 @@ class FarmService:
         if self.repository.has_current_event_after(season_id, end_date):
             raise FarmError("END_BEFORE_EVENT", "结束日期不能早于已登记的有效农事")
         self.repository.close_season(season_id, end_date)
+        self.repository.record_audit("farm.season_closed", "season", season_id)
         return replace(season, end_date=end_date)
 
     def create_event(self, season_id: UUID, data: EventInput) -> ManagementEvent:
@@ -110,6 +115,7 @@ class FarmService:
         season = self.get_season(season_id, lock=True)
         event = self._build_event(season, data)
         self.repository.add_event(event)
+        self.repository.record_audit("farm.event_created", "management_event", event.id)
         return event
 
     def correct_event(self, event_id: UUID, data: EventInput, reason: str) -> ManagementEvent:
@@ -130,6 +136,7 @@ class FarmService:
             correction_reason=reason.strip(),
         )
         self.repository.add_event(event)
+        self.repository.record_audit("farm.event_corrected", "management_event", event.id)
         return event
 
     def list_events(

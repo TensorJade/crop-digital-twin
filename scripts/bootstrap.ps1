@@ -13,5 +13,5 @@ try {
     Invoke-Checked $uvExecutable @('sync', '--locked', '--all-packages', '--group', 'dev')
     Push-Location 'frontend'
     try { Invoke-WorkspaceNpm @('ci') } finally { Pop-Location }
-    Write-Host 'Environment ready. Start API/frontend in separate terminals; run scripts\check.ps1.'
+    Write-Host 'Environment ready. Run init-db.ps1, create-admin.ps1, then start API/frontend in separate terminals; run check.ps1.'
 } finally { Pop-Location }

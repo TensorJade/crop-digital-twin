@@ -200,11 +200,255 @@ h3 {
   padding: 16px 12px;
 }
 .entry-form label,
-.closing-form label {
+.closing-form label,
+.login-form label {
   display: grid;
   gap: 6px;
   font-size: 13px;
   color: #405c4e;
+}
+
+.login-workspace {
+  max-width: 980px;
+  margin: 10vh auto 0;
+  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.login-intro {
+  padding: 28px 0;
+}
+.login-intro h1 {
+  margin: 12px 0 18px;
+}
+.login-intro > p:not(.brand-label) {
+  color: #60736a;
+  font-size: 15px;
+}
+.login-ledger {
+  list-style: none;
+  padding: 0 0 0 18px;
+  margin: 32px 0 0;
+  border-left: 3px solid #b9d9c5;
+}
+.login-ledger li {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 24px;
+}
+.login-ledger strong {
+  color: var(--field-green);
+  font-size: 17px;
+}
+.login-ledger span {
+  color: #60736a;
+  font-size: 14px;
+}
+.login-surface {
+  border-top: 4px solid var(--field-green);
+}
+.login-surface h2 {
+  margin: 6px 0 10px;
+}
+.login-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+.login-help {
+  margin-top: 22px;
+}
+.session-loading {
+  max-width: 900px;
+  margin: 12vh auto;
+  padding: 28px;
+  color: #60736a;
+}
+.session-error {
+  max-width: 1204px;
+  margin: 20px auto;
+}
+.identity-bar {
+  max-width: 1260px;
+  margin: auto;
+  padding: 18px 28px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.identity-team {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.identity-team strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.identity-team span {
+  font-size: 13px;
+  color: #60736a;
+  overflow-wrap: anywhere;
+}
+.identity-actions {
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.workspace-tabs {
+  max-width: 1204px;
+  margin: auto;
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.workspace-tabs button {
+  background: transparent;
+  border: none;
+  padding: 12px 4px;
+  font-size: 14px;
+  color: #60736a;
+  border-radius: 0;
+}
+.workspace-tabs button[aria-pressed='true'] {
+  color: var(--field-green);
+  border-bottom: 3px solid var(--field-green);
+  font-weight: 600;
+}
+.account-panel {
+  max-width: 1204px;
+  margin: 24px auto 0;
+}
+.account-panel .login-form {
+  max-width: 760px;
+}
+.member-section {
+  margin-top: 24px;
+}
+.audit-section {
+  margin-top: 24px;
+}
+.member-list,
+.audit-list {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+}
+.member-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.member-entry > div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.member-entry strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.member-username {
+  font-size: 13px;
+  color: var(--river);
+  overflow-wrap: anywhere;
+}
+.member-entry small {
+  font-size: 12px;
+  color: #60736a;
+}
+.member-confirm {
+  max-width: 240px;
+}
+.member-confirm p {
+  margin-bottom: 8px;
+}
+.member-confirm .text-button {
+  margin-left: 10px;
+}
+.audit-entry {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) minmax(100px, 180px);
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  padding: 13px 0;
+  font-size: 14px;
+}
+.audit-entry time {
+  color: #60736a;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.audit-entry span {
+  color: #60736a;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 850px) {
+  .login-workspace {
+    gap: 24px;
+    margin-top: 3vh;
+  }
+  .identity-bar {
+    padding-inline: 28px;
+  }
+  .workspace-tabs,
+  .account-panel,
+  .session-error {
+    margin-inline: 28px;
+  }
+}
+@media (max-width: 520px) {
+  .login-workspace {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 24px 16px;
+    margin-top: 0;
+  }
+  .login-intro {
+    padding: 6px 0;
+  }
+  .login-ledger {
+    margin-top: 20px;
+  }
+  .login-ledger li {
+    margin-bottom: 14px;
+  }
+  .identity-bar {
+    padding: 16px;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .identity-actions {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+  .workspace-tabs,
+  .account-panel,
+  .session-error {
+    margin-inline: 16px;
+  }
+  .member-entry {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .member-confirm {
+    max-width: none;
+  }
+  .audit-entry {
+    grid-template-columns: minmax(0, 1fr) minmax(80px, 120px);
+    gap: 5px 12px;
+  }
+  .audit-entry time {
+    grid-column: 1 / -1;
+  }
 }
 input,
 select,

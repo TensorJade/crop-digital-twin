@@ -1,6 +1,6 @@
 [project]
 name = "crop-digital-twin-workspace"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local development workspace for crop digital twin"
 requires-python = ">=3.12,<3.13"
 dependencies = ["crop-twin-api", "crop-twin-engine"]
@@ -41,4 +41,4 @@ addopts = "-ra"
 python_version = "3.12"
 strict = true
 mypy_path = ["backend/src", "packages/crop_engine/src"]
-files = ["backend/src", "packages/crop_engine/src", "scripts/export_openapi.py", "scripts/check_workspace.py", "scripts/init_db.py", "scripts/e2e_api.py"]
+files = ["backend/src", "packages/crop_engine/src", "scripts/export_openapi.py", "scripts/check_workspace.py", "scripts/init_db.py", "scripts/e2e_api.py", "scripts/create_admin.py"]

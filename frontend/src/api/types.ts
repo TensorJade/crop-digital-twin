@@ -5,3 +5,11 @@ export interface HealthResponse {
   version: string
   scope: 'process'
 }
+
+/** Shared pagination transport without coupling identity and farm modules. */
+export interface Page<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}

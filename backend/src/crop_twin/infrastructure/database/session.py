@@ -2,8 +2,15 @@
 
 from pathlib import Path
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session
+
+
+def reserve_sqlite_writer(session: Session) -> None:
+    """Serialize SQLite writes before reading account or farm state."""
+    if session.get_bind().dialect.name == "sqlite":
+        session.execute(text("BEGIN IMMEDIATE"))
 
 
 def build_engine(database_url: str) -> Engine:

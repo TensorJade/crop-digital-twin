@@ -1,13 +1,12 @@
 """Thin farm HTTP adapters with one committed transaction per request."""
 
 from collections.abc import Iterator
-from typing import Annotated, cast
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import text
-from sqlalchemy.orm import Session, sessionmaker
 
+from crop_twin.api.v1.dependencies import DatabaseDependency, PrincipalDependency
 from crop_twin.api.v1.farm_schemas import (
     ErrorResponse,
     EventCorrection,
@@ -22,23 +21,24 @@ from crop_twin.api.v1.farm_schemas import (
 )
 from crop_twin.application.farm_service import FarmService
 from crop_twin.domain.farm.models import EventInput, PlotInput, SeasonInput
+from crop_twin.domain.identity.rules import require_writer
 from crop_twin.infrastructure.database.farm_repository import SqlFarmRepository
 
 router = APIRouter(
     prefix="/api/v1",
     tags=["farm"],
-    responses={status: {"model": ErrorResponse} for status in (400, 404, 409, 503)},
+    responses={status: {"model": ErrorResponse} for status in (400, 401, 403, 404, 409, 503)},
 )
 
 
-def get_farm_service(request: Request) -> Iterator[FarmService]:
+def get_farm_service(
+    request: Request, session: DatabaseDependency, principal: PrincipalDependency
+) -> Iterator[FarmService]:
     """Commit before sending a response; roll back failed/stale farm operations."""
-    factory = cast(sessionmaker[Session], request.app.state.session_factory)
-    with factory.begin() as session:
-        if request.method == "POST" and session.get_bind().dialect.name == "sqlite":
-            # SQLite has no row locks. Reserve its writer before reading business state.
-            session.execute(text("BEGIN IMMEDIATE"))
-        yield FarmService(SqlFarmRepository(session))
+    if request.method == "POST":
+        require_writer(principal.user)
+    repository = SqlFarmRepository(session, principal.user.organization_id, principal.user.id)
+    yield FarmService(repository, principal.user.organization_id)
 
 
 FarmDependency = Annotated[FarmService, Depends(get_farm_service, scope="function")]

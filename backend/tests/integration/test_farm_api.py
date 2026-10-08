@@ -279,6 +279,7 @@ def test_persistence_survives_app_restart(client: TestClient, database_url: str)
     with TestClient(
         create_app(Settings(environment="test", database_url=SecretStr(database_url)))
     ) as restarted:
+        restarted.cookies.update(client.cookies)
         assert restarted.get(f"/api/v1/plots/{plot_id}").json()["name"] == "测试地块"
 
 

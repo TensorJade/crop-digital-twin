@@ -2,12 +2,15 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
+import { apiLogin, authorizedPost, browserLogin } from './helpers'
 
 const errors = new WeakMap<Page, string[]>()
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ page, request }) => {
   const messages: string[] = []
   errors.set(page, messages)
   page.on('pageerror', (error) => messages.push(error.message))
+  await apiLogin(request)
+  await browserLogin(page)
 })
 test.afterEach(async ({ page }) => {
   expect(errors.get(page)).toEqual([])
@@ -98,8 +101,11 @@ test('failed initial load is actionable and retry restores the real plot list', 
   request,
 }) => {
   const name = `重试田-${Date.now()}`
-  const seed = await request.post('/api/v1/plots', {
-    data: { name, area_mu: '15', latitude: 23.1, longitude: 113.2 },
+  const seed = await authorizedPost(request, '/api/v1/plots', {
+    name,
+    area_mu: '15',
+    latitude: 23.1,
+    longitude: 113.2,
   })
   expect(seed.status()).toBe(201)
   await page.route('**/api/v1/plots?*', (route) =>
@@ -128,18 +134,19 @@ test('a delayed response from the previous plot cannot replace the newly selecte
 }) => {
   const timestamp = Date.now()
   const makePlot = async (name: string) => {
-    const result = await request.post('/api/v1/plots', {
-      data: { name, area_mu: '15', latitude: 23.1, longitude: 113.2 },
+    const result = await authorizedPost(request, '/api/v1/plots', {
+      name,
+      area_mu: '15',
+      latitude: 23.1,
+      longitude: 113.2,
     })
     expect(result.status()).toBe(201)
     const plot = await result.json()
-    const season = await request.post('/api/v1/seasons', {
-      data: {
-        plot_id: plot.id,
-        start_date: '2026-03-01',
-        establishment_method: 'transplanting',
-        variety_name: name,
-      },
+    const season = await authorizedPost(request, '/api/v1/seasons', {
+      plot_id: plot.id,
+      start_date: '2026-03-01',
+      establishment_method: 'transplanting',
+      variety_name: name,
     })
     expect(season.status()).toBe(201)
     return plot.id as string
@@ -185,18 +192,19 @@ test('retry also reloads a failed season request when the plot selection is unch
   request,
 }) => {
   const name = `种植季重试田-${Date.now()}`
-  const result = await request.post('/api/v1/plots', {
-    data: { name, area_mu: '15', latitude: 23.1, longitude: 113.2 },
+  const result = await authorizedPost(request, '/api/v1/plots', {
+    name,
+    area_mu: '15',
+    latitude: 23.1,
+    longitude: 113.2,
   })
   expect(result.status()).toBe(201)
   const plot = await result.json()
-  const season = await request.post('/api/v1/seasons', {
-    data: {
-      plot_id: plot.id,
-      start_date: '2026-03-01',
-      establishment_method: 'transplanting',
-      variety_name: name,
-    },
+  const season = await authorizedPost(request, '/api/v1/seasons', {
+    plot_id: plot.id,
+    start_date: '2026-03-01',
+    establishment_method: 'transplanting',
+    variety_name: name,
   })
   expect(season.status()).toBe(201)
   await page.route('**/api/v1/seasons?*', (route) =>

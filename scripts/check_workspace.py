@@ -23,6 +23,10 @@ REQUIRED = [
     "backend/migrations/versions/0001_farm_records.py",
     "docs/modules/farm-management.md",
     "frontend/src/features/farm/ManagementPanel.vue",
+    "backend/migrations/versions/0002_identity.py",
+    "frontend/src/features/identity/LoginPage.vue",
+    "docs/modules/identity.md",
+    "scripts/create_admin.py",
 ]
 
 
@@ -37,6 +41,10 @@ def main() -> None:
         "/api/v1/plots",
         "/api/v1/seasons",
         "/api/v1/management-events",
+        "/api/v1/auth/login",
+        "/api/v1/auth/me",
+        "/api/v1/users",
+        "/api/v1/audit-events",
     }
     if not required_routes <= schema["paths"].keys():
         raise SystemExit("An implemented M1 route is missing.")

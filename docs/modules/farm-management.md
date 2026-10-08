@@ -1,6 +1,6 @@
 # M1 农田管理详细设计
 
-状态：0.2.0 已实现，本地检查证据见 M1 开发日志。需求关联：F02、F05、F12 的部分内容；不包含地图圈地、账户权限或生长模拟。
+状态：0.2.0 实现农田业务，0.3.0 接入 M2 组织授权与同事务审计。证据见 M1/M2 开发日志。需求关联：F02、F05、F12 的部分内容；地图圈地和生长模拟尚未实现。
 
 ## 用户链路
 
@@ -10,11 +10,13 @@
 flowchart LR
   U[农田管理人员] --> UI[地块/种植季/农事表单]
   UI --> API[请求与响应验证]
-  API --> S[FarmService 业务编排]
+  API --> AUTH[会话/CSRF/角色与组织]
+  AUTH --> S[FarmService 业务编排]
   S --> D[日期/单位/修订规则]
   S --> R[FarmRepository 存储契约]
   R --> SQL[SQLAlchemy 数据适配]
   SQL --> DB[(SQLite 本地 / PostgreSQL)]
+  SQL --> AUDIT[同事务操作审计]
   DB --> SQL --> S --> API --> UI
 ```
 
@@ -33,7 +35,7 @@ flowchart LR
 
 列表返回 items、total、limit、offset；农事列表默认只返回当前版本，include_history=true 返回修订历史。创建成功 201，正常查询/结束成功 200；不存在 404，业务日期/单位不合法 400，重复修正或冲突 409，请求结构不合法 422，存储不可用 503。
 
-目前为回环地址运行的单用户本地开发模块，无登录与地块授权。production 模式不开放此业务 API；公开服务需先完成 M2 和 HTTPS。请求不需要授权头；JSON 请求使用 Content-Type: application/json。
+所有接口需登录 Cookie；写入还需 X-CSRF-Token 和管理员/农田管理角色。JSON 使用 Content-Type: application/json。查询在 SQL 限定当前组织，跨组织地块/种植季/农事 ID 返回 404；无会话 401，无权限/CSRF 错误 403。Plot 响应增加 organization_id，创建请求不能指定归属。详细角色与会话见 [M2](identity.md)。production 启动保护保留到 M7。
 
 ## 单位与规则
 
@@ -49,4 +51,4 @@ flowchart LR
 
 本模块采用组织规则的逻辑外键：在同一事务中检查父对象，保留关系字段索引，不提供物理删除。PostgreSQL 对父对象加行锁，避免并发建立季节、关闭季节或修正农事的冲突；SQLite 作为本地开发存储，在写事务使用 BEGIN IMMEDIATE 串行处理写入。唯一修订指针与开放季唯一索引提供数据库约束。
 
-数据表通过 Alembic 显式迁移建立。启动 API 不隐式建表。完整字段、约束与单位以本模块迁移和 ORM 为实际版本，原方案数据字典仍为总体目标。
+数据表通过 Alembic 显式迁移建立。启动 API 不隐式建表。业务与审计在同一事务成功，审计失败时一起回滚。完整字段、约束与单位以 0001、0002 和 ORM 为实际版本，原方案数据字典仍为总体目标。

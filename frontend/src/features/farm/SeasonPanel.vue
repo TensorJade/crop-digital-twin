@@ -10,6 +10,7 @@ const props = defineProps<{
   seasons: Page<Season> | null
   selectedId: string | null
   isLoading: boolean
+  canManage: boolean
 }>()
 const emit = defineEmits<{
   select: [id: string]
@@ -94,7 +95,7 @@ async function finishSeason() {
         <h2 id="seasons-title">选择种植季</h2>
       </div>
       <button
-        v-if="seasons?.total !== 0"
+        v-if="canManage && seasons?.total !== 0"
         type="button"
         class="secondary-button"
         :disabled="isSaving"
@@ -134,7 +135,11 @@ async function finishSeason() {
       :disabled="isLoading"
       @navigate="emit('navigate', $event)"
     />
-    <form v-if="isAdding || seasons?.total === 0" class="entry-form" @submit.prevent="saveSeason">
+    <form
+      v-if="canManage && (isAdding || seasons?.total === 0)"
+      class="entry-form"
+      @submit.prevent="saveSeason"
+    >
       <h3>建立种植季</h3>
       <div class="field-pair">
         <label
@@ -156,7 +161,7 @@ async function finishSeason() {
         {{ isSaving ? '保存中…' : '保存种植季' }}
       </button>
     </form>
-    <div v-if="selectedSeason && !selectedSeason.end_date" class="season-actions">
+    <div v-if="canManage && selectedSeason && !selectedSeason.end_date" class="season-actions">
       <button type="button" class="text-button" @click="isClosing = !isClosing">
         {{ isClosing ? '取消结束' : '结束当前种植季' }}
       </button>

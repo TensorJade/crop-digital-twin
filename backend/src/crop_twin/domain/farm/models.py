@@ -6,6 +6,8 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
+from crop_twin.domain.pagination import Page as Page
+
 EstablishmentMethod = Literal["direct_sowing", "transplanting"]
 EventType = Literal[
     "sowing", "transplanting", "irrigation", "fertilization", "inspection", "harvest"
@@ -33,6 +35,7 @@ class Plot:
     latitude: float
     longitude: float
     created_at: datetime
+    organization_id: UUID
 
     @property
     def area_ha(self) -> Decimal:
@@ -96,13 +99,3 @@ class ManagementEvent:
     replaces_event_id: UUID | None = None
     correction_reason: str | None = None
     is_current: bool = True
-
-
-@dataclass(frozen=True)
-class Page[T]:
-    """Bounded collection result shared across the three farm list use cases."""
-
-    items: list[T]
-    total: int
-    limit: int
-    offset: int

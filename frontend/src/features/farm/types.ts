@@ -1,13 +1,9 @@
 /** Transport types mirror the versioned OpenAPI, including decimal strings. */
-export interface Page<T> {
-  items: T[]
-  total: number
-  limit: number
-  offset: number
-}
+export type { Page } from '../../api/types'
 
 export interface Plot {
   id: string
+  organization_id: string
   name: string
   area_mu: string
   area_ha: string

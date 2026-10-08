@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crop-twin-api"
-version = "0.2.0"
+version = "0.3.0"
 description = "Farm management API for a crop digital twin"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
   "SQLAlchemy==2.1.4",
   "alembic==1.20.0",
   "psycopg[binary]==3.3.6",
+  "argon2-cffi==25.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -5,7 +5,7 @@ import { correctEvent, createEvent, listEvents } from './api'
 import { displayQuantity, eventLabels, localDate, unitLabels } from './types'
 import type { EventInput, EventType, InputUnit, ManagementEvent, Page, Season } from './types'
 
-const props = defineProps<{ season: Season }>()
+const props = defineProps<{ season: Season; canManage: boolean }>()
 const events = ref<Page<ManagementEvent> | null>(null)
 const includeHistory = ref(false)
 const isLoading = ref(false)
@@ -131,12 +131,16 @@ async function saveEvent() {
         <p class="step-label">第三步 · 本季管理</p>
         <h2 id="management-title">农事记录</h2>
       </div>
-      <button type="button" class="primary-button" @click="toggleForm">
+      <button v-if="canManage" type="button" class="primary-button" @click="toggleForm">
         {{ isAdding ? '收起表单' : '登记农事' }}
       </button>
     </div>
     <p class="muted">把每次灌溉、施肥和巡田留在这一季的记录里。</p>
-    <form v-if="isAdding" class="entry-form operation-form" @submit.prevent="saveEvent">
+    <form
+      v-if="canManage && isAdding"
+      class="entry-form operation-form"
+      @submit.prevent="saveEvent"
+    >
       <h3>{{ editingId ? '修正农事' : '登记农事' }}</h3>
       <div class="field-pair">
         <label
@@ -247,7 +251,7 @@ async function saveEvent() {
           </p>
         </div>
         <button
-          v-if="event.is_current"
+          v-if="canManage && event.is_current"
           type="button"
           class="text-button"
           :aria-label="`修正 ${event.occurred_on} ${eventLabels[event.event_type]}`"
@@ -258,7 +262,11 @@ async function saveEvent() {
       </li>
     </ol>
     <p v-else-if="events" class="empty-guidance">
-      还没有本季农事。完成管理后，点击“登记农事”保存一次记录。
+      {{
+        canManage
+          ? '还没有本季农事。完成管理后，点击“登记农事”保存一次记录。'
+          : '还没有本季农事记录。'
+      }}
     </p>
     <PageNavigation
       v-if="events"

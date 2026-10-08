@@ -3,9 +3,9 @@
 from dataclasses import asdict
 from datetime import UTC, date, datetime
 from typing import Literal, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, aliased
 
 from crop_twin.domain.farm.models import (
@@ -17,6 +17,7 @@ from crop_twin.domain.farm.models import (
     Plot,
     Season,
 )
+from crop_twin.infrastructure.database.identity_models import AuditRecord
 from crop_twin.infrastructure.database.models import EventRecord, PlotRecord, SeasonRecord
 
 
@@ -26,6 +27,7 @@ def _utc(value: datetime) -> datetime:
 
 
 def _plot(record: PlotRecord) -> Plot:
+    assert record.organization_id is not None
     return Plot(
         record.id,
         record.name,
@@ -33,6 +35,7 @@ def _plot(record: PlotRecord) -> Plot:
         record.latitude,
         record.longitude,
         _utc(record.created_at),
+        record.organization_id,
     )
 
 
@@ -71,12 +74,36 @@ def _event(record: EventRecord, is_current: bool) -> ManagementEvent:
 class SqlFarmRepository:
     """Translate records and execute bounded SQL within the caller's transaction."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, organization_id: UUID, actor_id: UUID) -> None:
         self.session = session
+        self.organization_id, self.actor_id = organization_id, actor_id
+
+    def _plot_ids(self) -> Select[UUID]:
+        return select(PlotRecord.id).where(PlotRecord.organization_id == self.organization_id)
+
+    def _season_ids(self) -> Select[UUID]:
+        return select(SeasonRecord.id).where(SeasonRecord.plot_id.in_(self._plot_ids()))
+
+    def record_audit(self, action: str, entity_type: str, entity_id: UUID) -> None:
+        """Append the mutation audit in the same transaction as the farm fact."""
+        self.session.add(
+            AuditRecord(
+                id=uuid4(),
+                organization_id=self.organization_id,
+                actor_user_id=self.actor_id,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                created_at=datetime.now(UTC),
+            )
+        )
+        self.session.flush()
 
     def get_plot(self, plot_id: UUID, *, lock: bool = False) -> Plot | None:
         """Read the parent plot, optionally serializing writes to its seasons."""
-        statement = select(PlotRecord).where(PlotRecord.id == plot_id)
+        statement = select(PlotRecord).where(
+            PlotRecord.id == plot_id, PlotRecord.organization_id == self.organization_id
+        )
         if lock:
             statement = statement.with_for_update().execution_options(populate_existing=True)
         record = self.session.scalar(statement)
@@ -89,9 +116,13 @@ class SqlFarmRepository:
 
     def list_plots(self, limit: int, offset: int) -> Page[Plot]:
         """Read plot pagination in deterministic newest-first order."""
-        total = self.session.scalar(select(func.count()).select_from(PlotRecord)) or 0
+        condition = PlotRecord.organization_id == self.organization_id
+        total = (
+            self.session.scalar(select(func.count()).select_from(PlotRecord).where(condition)) or 0
+        )
         records = self.session.scalars(
             select(PlotRecord)
+            .where(condition)
             .order_by(PlotRecord.created_at.desc(), PlotRecord.id.desc())
             .limit(limit)
             .offset(offset)
@@ -100,7 +131,9 @@ class SqlFarmRepository:
 
     def get_season(self, season_id: UUID, *, lock: bool = False) -> Season | None:
         """Read a season, optionally serializing operations and its closing date."""
-        statement = select(SeasonRecord).where(SeasonRecord.id == season_id)
+        statement = select(SeasonRecord).where(
+            SeasonRecord.id == season_id, SeasonRecord.plot_id.in_(self._plot_ids())
+        )
         if lock:
             statement = statement.with_for_update().execution_options(populate_existing=True)
         record = self.session.scalar(statement)
@@ -126,13 +159,15 @@ class SqlFarmRepository:
         return [
             _season(record)
             for record in self.session.scalars(
-                select(SeasonRecord).where(SeasonRecord.plot_id == plot_id)
+                select(SeasonRecord).where(
+                    SeasonRecord.plot_id == plot_id, SeasonRecord.plot_id.in_(self._plot_ids())
+                )
             )
         ]
 
     def list_seasons(self, plot_id: UUID, limit: int, offset: int) -> Page[Season]:
         """Return season pagination for one checked plot."""
-        condition = SeasonRecord.plot_id == plot_id
+        condition = (SeasonRecord.plot_id == plot_id) & SeasonRecord.plot_id.in_(self._plot_ids())
         total = (
             self.session.scalar(select(func.count()).select_from(SeasonRecord).where(condition))
             or 0
@@ -153,7 +188,9 @@ class SqlFarmRepository:
             ~select(successor.id).where(successor.replaces_event_id == EventRecord.id).exists()
         )
         row = self.session.execute(
-            select(EventRecord, current).where(EventRecord.id == event_id)
+            select(EventRecord, current).where(
+                EventRecord.id == event_id, EventRecord.season_id.in_(self._season_ids())
+            )
         ).first()
         return _event(row[0], row[1]) if row is not None else None
 
@@ -174,7 +211,10 @@ class SqlFarmRepository:
             self.session.scalar(
                 select(EventRecord.id)
                 .where(
-                    EventRecord.season_id == season_id, EventRecord.occurred_on > end_date, current
+                    EventRecord.season_id == season_id,
+                    EventRecord.occurred_on > end_date,
+                    current,
+                    EventRecord.season_id.in_(self._season_ids()),
                 )
                 .limit(1)
             )
@@ -188,7 +228,9 @@ class SqlFarmRepository:
         current = (
             ~select(successor.id).where(successor.replaces_event_id == EventRecord.id).exists()
         )
-        condition = EventRecord.season_id == season_id
+        condition = (EventRecord.season_id == season_id) & EventRecord.season_id.in_(
+            self._season_ids()
+        )
         filters = [condition] if include_history else [condition, current]
         total = (
             self.session.scalar(select(func.count()).select_from(EventRecord).where(*filters)) or 0
