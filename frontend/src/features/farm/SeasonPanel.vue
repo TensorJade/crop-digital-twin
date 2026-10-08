@@ -93,7 +93,13 @@ async function finishSeason() {
         <p class="step-label">第二步 · {{ plot.name }}</p>
         <h2 id="seasons-title">选择种植季</h2>
       </div>
-      <button type="button" class="secondary-button" @click="isAdding = !isAdding">
+      <button
+        v-if="seasons?.total !== 0"
+        type="button"
+        class="secondary-button"
+        :disabled="isSaving"
+        @click="isAdding = !isAdding"
+      >
         {{ isAdding ? '收起' : '建立种植季' }}
       </button>
     </div>

@@ -14,7 +14,8 @@ test.afterEach(async ({ page }) => {
 })
 
 async function registerPlot(page: Page, plotName: string) {
-  await page.getByRole('button', { name: '登记地块', exact: true }).click()
+  const openForm = page.getByRole('button', { name: '登记地块', exact: true })
+  if (await openForm.isVisible()) await openForm.click()
   await page.getByLabel('地块名称', { exact: true }).fill(plotName)
   await page.getByLabel('面积（亩）', { exact: true }).fill('15')
   await page.getByLabel('纬度', { exact: true }).fill('23.1')
@@ -28,7 +29,8 @@ async function registerPlot(page: Page, plotName: string) {
 }
 
 async function establishSeason(page: Page, date: string, variety: string) {
-  await page.getByRole('button', { name: '建立种植季', exact: true }).click()
+  const openForm = page.getByRole('button', { name: '建立种植季', exact: true })
+  if (await openForm.isVisible()) await openForm.click()
   await page.getByRole('combobox', { name: '种植方式', exact: true }).selectOption('transplanting')
   await page.getByLabel('播种 / 移栽日期', { exact: true }).fill(date)
   await page.getByLabel('水稻品种（选填）', { exact: true }).fill(variety)

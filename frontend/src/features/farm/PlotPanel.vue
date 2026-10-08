@@ -51,7 +51,13 @@ async function savePlot() {
         <p class="step-label">第一步</p>
         <h2 id="plots-title">选择地块</h2>
       </div>
-      <button type="button" class="text-button" @click="isAdding = !isAdding">
+      <button
+        v-if="plots?.total !== 0"
+        type="button"
+        class="text-button"
+        :disabled="isSaving"
+        @click="isAdding = !isAdding"
+      >
         {{ isAdding ? '收起' : '登记地块' }}
       </button>
     </div>
