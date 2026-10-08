@@ -13,7 +13,7 @@
 
 M1 农田管理与 M2 账户授权共 19 个操作、八张业务表。M3.1 新增土壤登记、品种参数 JSON 和天气 CSV 导入、逐日输入检查、追加版本快照和下载，复用组织、角色、CSRF 和同事务审计。当前共 20 条路径、26 个 GET/POST 操作、十张业务表，迁移到 0003_simulation_inputs。
 
-本地后端与纯输入检查 102 项通过，62 项 PostgreSQL 用例因未配置本机测试数据库而跳过，合并行覆盖率 98.17%。前端 20 项单元、11 条 Edge 浏览器流程通过；已检查桌面/390px 手机截图，实际下载文件通过离线校验和核验。远程 PostgreSQL17/SQLite 与 Chromium CI 正待验证；最终提交和证据见 [M3.1 日志](dev-log/2026-10-08-simulation-inputs.md)。
+本地后端与纯输入检查 102 项通过，62 项 PostgreSQL 用例因未配置本机测试数据库而跳过，合并行覆盖率 98.17%。前端 20 项单元、11 条 Edge 浏览器流程通过；已检查桌面/390px 手机截图，实际下载文件通过离线校验和核验。远程 PostgreSQL17/SQLite CI 共 164 项全通过、无跳过，覆盖率 98.30%；20 项单元和 11 条 Chromium 流程通过。实现提交 efc95d0 的 [CI](https://github.com/TensorJade/crop-digital-twin/actions/runs/37768936266) 为 success；完整证据见 [M3.1 日志](dev-log/2026-10-08-simulation-inputs.md)。
 
 默认运行 SQLite 已从 0002 增量升级至 0003，原有记录数量保持为零，未创建用户、组织、测试农田或默认模型参数。本机 Docker 未运行。production 保护保留到 M7。
 

@@ -53,7 +53,11 @@ station/gridded 明确区分；天气日界及真实位置/海拔必须声明，
 
 ## Git 与远程验证
 
-代码提交与推送待完成；本机无 PostgreSQL 测试 URL、Docker daemon 未运行，因此不将跳过计作成功。远程 CI 使用真实 PostgreSQL17/SQLite 和 Chromium，结果将在核验后记录。未合并保护分支，未部署公开服务。
+实现提交 efc95d04e79907499720cee4f52fc15a61e35597 已推送至本功能分支。GitHub Actions [运行 37768936266](https://github.com/TensorJade/crop-digital-twin/actions/runs/37768936266) 的 headSha 与提交一致，整体及两个任务均为 success，2026-10-08 19:19（北京时间）核验。
+
+真实 PostgreSQL17/SQLite：164 项全部通过，无跳过；合并覆盖率 98.30%；Ruff、mypy、契约与目录检查通过。前端安装、类型/格式/lint、20 项单元、构建与 11 条 Chromium 流程通过（浏览器 18.4s）。并发用例为不同成员，验证种植季序列锁；软件验收不构成水稻模型精度结论。
+
+本机 PostgreSQL 用例仍未运行，远程 CI 提供服务器数据库验证。本文件与 progress/roadmap 的验证记录在后续文档提交同步；具体提交可查 Git 日志。未合并保护分支，未部署公开服务。
 
 ## 下一步和限制
 
