@@ -17,13 +17,13 @@ flowchart LR
     MAP[授权卫星底图] --> WEB
 ```
 
-上图是目标结构。当前 M1/M2 已覆盖 Vue 登录/农田/成员页面 → FastAPI 会话与权限入口 → FarmService、IdentityService/领域规则 → SQLAlchemy → SQLite/PostgreSQL；Q、W、E、天气、地图与对象存储未实现。本地默认 SQLite，Redis 暂不接入。
+上图是目标结构。当前 M1/M2/M3.1 已覆盖 Vue 登录/农田/成员/输入页面 → FastAPI 授权入口 → FarmService、IdentityService、SimulationInputService → SQLAlchemy → SQLite/PostgreSQL。输入服务另调用纯 crop_engine 校验/单位转换；Q、W、实际模型、联网天气、地图和对象存储未实现。本地默认 SQLite，Redis 暂不接入。
 
-实际数据流见 [M1](modules/farm-management.md)与 [M2](modules/identity.md)。前端 farm、identity 各自集中组件与状态，后端对应领域与应用模块；共用分页/HTTP 不依赖业务模块。权限在 API 与限定组织的 SQL 查询边界强制检查。
+实际数据流见 [M1](modules/farm-management.md)、[M2](modules/identity.md)和 [M3.1](modules/simulation-inputs.md)。前端 farm、identity、simulation 各自集中组件与状态，后端对应领域与应用模块；共用分页/HTTP 不依赖业务模块。权限在 API 与限定组织的 SQL 查询边界强制检查。
 
 M2 使用 SQL 会话与角色，不引入 JWT/Redis。密码经 Argon2id 哈希，随机会话 Cookie 的摘要存 SQL；CSRF 绑定会话，前端仅内存持有。业务和审计同事务，停用/改密码撤销会话。组织内共享地块，尚无逐成员地块权限。旧地块保留到明确初始化接收，不自动给首次登录者授权。依据见 [ADR 0003](adr/0003-identity.md)。
 
-业务主数据以 SQL 为权威来源；Redis 不承载唯一业务事实；大影像采用对象存储，SQL 保存路径、版本、校验和和来源。模拟输入快照、管理事件、原始预测、遥感观测与校准结果分别留存，历史不得被无记录覆盖。
+业务主数据以 SQL 为权威来源；Redis 不承载唯一业务事实；大影像采用对象存储，SQL 保存路径、版本、校验和和来源。已实现的模拟输入快照与管理修订历史只追加；未来原始预测、遥感观测与校准结果也分别留存。M3.1 用两张 SQL 表保存明确类型的资料和封存快照，不引入通用资产平台。依据见 [ADR0004](adr/0004-simulation-inputs.md)。
 
 重计算目标流程：API 校验并记录任务 → worker 取不可变快照 → 运行模型或影像流程 → 保存版本化结果 → 更新任务状态 → 前端查询。任务幂等、失败重试、租约恢复和权限需在业务实现阶段验证。
 

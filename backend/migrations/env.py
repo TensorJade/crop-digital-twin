@@ -2,7 +2,7 @@
 
 from alembic import context
 from crop_twin.core.settings import Settings
-from crop_twin.infrastructure.database.identity_models import Base
+from crop_twin.infrastructure.database.input_models import Base
 from crop_twin.infrastructure.database.session import build_engine
 from sqlalchemy.engine import Connection
 

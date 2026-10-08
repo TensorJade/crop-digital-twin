@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Identity } from '../features/identity/types'
 import PlotPanel from '../features/farm/PlotPanel.vue'
 import SeasonPanel from '../features/farm/SeasonPanel.vue'
 import ManagementPanel from '../features/farm/ManagementPanel.vue'
+import SimulationInputsPanel from '../features/simulation/SimulationInputsPanel.vue'
 import { useFarmWorkspace } from '../features/farm/useFarmWorkspace'
 
 const props = defineProps<{ identity: Identity }>()
@@ -24,6 +25,10 @@ const {
   selectPlot,
   seasonSaved,
 } = useFarmWorkspace()
+const seasonView = ref<'management' | 'inputs'>('management')
+watch(selectedSeasonId, () => {
+  seasonView.value = 'management'
+})
 </script>
 
 <template>
@@ -64,7 +69,37 @@ const {
             @saved="seasonSaved"
             @navigate="loadSeasons($event)"
           />
-          <ManagementPanel v-if="selectedSeason" :season="selectedSeason" :can-manage="canManage" />
+          <template v-if="selectedSeason">
+            <nav class="season-tabs" aria-label="本季资料">
+              <button
+                type="button"
+                :aria-pressed="seasonView === 'management'"
+                @click="seasonView = 'management'"
+              >
+                农事记录
+              </button>
+              <button
+                type="button"
+                :aria-pressed="seasonView === 'inputs'"
+                @click="seasonView = 'inputs'"
+              >
+                模拟资料
+              </button>
+            </nav>
+            <ManagementPanel
+              v-if="seasonView === 'management'"
+              :key="selectedSeason.id"
+              :season="selectedSeason"
+              :can-manage="canManage"
+            />
+            <SimulationInputsPanel
+              v-else
+              :key="selectedSeason.id"
+              :season="selectedSeason"
+              :plot="selectedPlot"
+              :can-manage="canManage"
+            />
+          </template>
         </template>
         <section v-else class="onboarding-surface">
           <p class="step-label">从一块田开始</p>
@@ -85,7 +120,7 @@ const {
       </div>
     </main>
     <footer class="workspace-footer">
-      当前支持农田与农事记录。地图、生长模拟和遥感观测将按模块接入。
+      当前支持农田记录和模拟输入资料。生长计算、地图和遥感将按模块接入。
     </footer>
   </div>
 </template>

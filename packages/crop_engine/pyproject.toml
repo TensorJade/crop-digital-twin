@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crop-twin-engine"
-version = "0.1.0"
-description = "Reserved package boundary for crop simulation and remote sensing"
+version = "0.2.0"
+description = "Offline input contracts, quality checks and PCSE field conversion"
 requires-python = ">=3.12,<3.13"
 dependencies = []
 

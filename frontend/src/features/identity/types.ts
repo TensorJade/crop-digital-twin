@@ -54,4 +54,6 @@ export const actionLabels: Record<string, string> = {
   'farm.season_closed': '结束种植季',
   'farm.event_created': '登记农事',
   'farm.event_corrected': '修正农事',
+  'inputs.asset_created': '保存模拟资料',
+  'inputs.snapshot_created': '保存输入快照',
 }

@@ -31,7 +31,7 @@ jobs:
       - run: uv run --locked ruff check backend packages scripts
       - run: uv run --locked ruff format --check backend packages scripts
       - run: uv run --locked mypy
-      - run: uv run --locked pytest --cov=crop_twin --cov-report=term-missing --cov-fail-under=80
+      - run: uv run --locked pytest --cov=crop_twin --cov=crop_engine --cov-report=term-missing --cov-fail-under=80
       - run: uv run --locked python scripts/export_openapi.py --check
       - run: uv run --locked python scripts/check_workspace.py
   frontend:

@@ -10,7 +10,21 @@
 
 PostgreSQL URL 格式：postgresql+psycopg://用户:URL编码后的密码@127.0.0.1:5432/数据库。先创建数据库/用户，或按 infra/README 启动开发 postgres；设置 URL 后 init-db。修改 URL 不搬迁 SQLite 数据，跨库迁移需另行设计验证。
 
-本机 Docker daemon 未运行。CI 使用 PostgreSQL 17；空间扩展留待地图模块。Redis 不参与 M1/M2。
+本机 Docker daemon 未运行。CI 使用 PostgreSQL 17；空间扩展留待地图模块。Redis 不参与 M1/M2/M3.1。
+
+从 0.3.0 升级执行 init-db 至 0003，只增加两张输入表，不需重建账号。不得降级运行库来清理输入历史。
+
+## 输入资料与导出
+
+选择本组织地块和种植季，切换“模拟资料”。登记土壤体积含水率和深度，导入农艺提供者准备的 JSON 参数，再导入列名为 date,tmin_c,tmax_c,rain_mm,radiation_mj_m2,wind_m_s,vapor_kpa 的 UTF-8 天气 CSV。页面可下载只有表头的 CSV，不提供虚构天气。所有资料填写来源/使用许可，天气另填真实来源坐标、海拔、站点/网格、日界；风速为 2m，蒸汽压不是相对湿度。
+
+明确实际出苗日和截止日，检查后可保存输入快照；未补齐时仍保存明确的待补齐报告。新增资料不覆盖旧版本，管理更正后需另存快照。只读成员可查看/下载。下载 JSON 后在本地核验：
+
+```powershell
+& .tools\uv\Scripts\uv.exe run --locked python scripts/verify_input.py 'C:\path\to\rice-input.json'
+```
+
+PASS 仅表示 payload 校验和一致，不表示模型运行、来源认证或精度验证。资料上限 512 KiB，天气 CSV 256 KiB/366 天，快照 1 MiB，核验文件上限 2 MiB。自动站点搜索、天气下载、PCSE 执行尚待 M3.2。
 
 ## 账户与配置
 

@@ -14,6 +14,7 @@ from crop_twin import __version__
 from crop_twin.api.v1.farm import router as farm_router
 from crop_twin.api.v1.health import router as health_router
 from crop_twin.api.v1.identity import router as identity_router
+from crop_twin.api.v1.inputs import router as inputs_router
 from crop_twin.core.settings import Settings
 from crop_twin.domain.farm.rules import FarmConflict, FarmError, FarmNotFound
 from crop_twin.domain.identity.rules import (
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(health_router)
     application.include_router(farm_router)
     application.include_router(identity_router)
+    application.include_router(inputs_router)
 
     @application.middleware("http")
     async def private_responses(

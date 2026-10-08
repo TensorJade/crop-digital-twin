@@ -1,8 +1,8 @@
 # 端到端验收
 
-浏览器测试位于 frontend/tests/e2e/{farm,identity}.spec.ts。Playwright 自动启动前端、真实 API 与已迁移临时数据库；Windows 入口 scripts/check-e2e.ps1，CI 使用 Chromium。
+浏览器测试位于 frontend/tests/e2e/{farm,identity,simulation}.spec.ts。Playwright 自动启动前端、真实 API 与已迁移临时数据库；Windows 入口 scripts/check-e2e.ps1，CI 使用 Chromium。
 
-当前九条流程：
+当前十一条流程：
 - 登录后地块/种植季 → 灌溉 → 单位换算 → 修正/历史 → 刷新 → 结束 → 下一季。
 - 地块与种植季读取故障重试。
 - 切换地块时旧请求延迟返回不覆盖当前种植季。
@@ -11,8 +11,10 @@
 - 农田管理成员修改密码，会话失效，旧密码失败、新密码登录。
 - 两组织页面的农田列表互不出现。
 - 停用成员使旧会话失效；重新启用后必须重新登录。
-- 真实 Uvicorn 服务忽略伪造的代理头，改变 X-Forwarded-For 不能绕过登录失败限制。
+- 真实 Uvicorn 服务忽略伪造的代理头，改变 X-Forwarded-For 不能绕过登录失败限制；测试实际使用另一回环来源，避免锁住其他流程。
+- 土壤、JSON 品种和 CSV 天气导入，坏 CSV 后修正重试，缺天气检查/保存/刷新；实际下载 JSON 后执行 Python 核验，桌面/手机截图与无溢出检查。
+- 只读成员可查看/下载输入历史，没有导入/保存操作。
 
 辅助 API 在独立 Cookie 请求上下文中登录并获取 CSRF；测试凭据只用于迁移后的隔离数据库。启动器先验证 test 环境及 OS 临时路径，拒绝使用运行数据库。运行用户数据不进入 Git。
 
-输出在忽略的 test-results/、runtime/。模拟与遥感链路实现后补验收；当前不提供科学精度、生产性能或完整发布安全结论。
+输出在忽略的 test-results/、runtime/。真实模拟与遥感链路实现后补验收；当前不提供科学精度、生产性能或完整发布安全结论。

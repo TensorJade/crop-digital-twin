@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Crop Digital Twin API
   description: Local farm management for South China rice; simulation is pending.
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /api/v1/health:
     get:
@@ -1454,8 +1454,701 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/input-assets:
+    get:
+      tags:
+      - simulation-inputs
+      summary: List Assets
+      description: List metadata for the plot's soil/weather or the team's crop parameter
+        library.
+      operationId: listInputAssets
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: kind
+        in: query
+        required: true
+        schema:
+          enum:
+          - soil
+          - crop
+          - weather
+          type: string
+          title: Kind
+      - name: plot_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Plot Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponse_AssetSummary_'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - simulation-inputs
+      summary: Create Asset
+      description: Save an explicit typed import with provenance and same-transaction
+        audit.
+      operationId: createInputAsset
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: '#/components/schemas/SoilAssetCreate'
+              - $ref: '#/components/schemas/CropAssetCreate'
+              - $ref: '#/components/schemas/WeatherAssetCreate'
+              discriminator:
+                propertyName: kind
+                mapping:
+                  soil: '#/components/schemas/SoilAssetCreate'
+                  crop: '#/components/schemas/CropAssetCreate'
+                  weather: '#/components/schemas/WeatherAssetCreate'
+              title: Data
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/input-assets/{asset_id}:
+    get:
+      tags:
+      - simulation-inputs
+      summary: Get Asset
+      description: Return the original typed payload; foreign asset IDs are 404.
+      operationId: getInputAsset
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: asset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Asset Id
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/simulation-inputs/check:
+    post:
+      tags:
+      - simulation-inputs
+      summary: Check Inputs
+      description: Preview completeness; this endpoint does not execute a scientific
+        model.
+      operationId: checkSimulationInputs
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapshotCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/simulation-inputs:
+    get:
+      tags:
+      - simulation-inputs
+      summary: List Snapshots
+      description: Read retained input versions for an authorized season.
+      operationId: listSimulationInputs
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: season_id
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Season Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageResponse_SnapshotSummary_'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - simulation-inputs
+      summary: Create Snapshot
+      description: Freeze selected assets and current management; an incomplete snapshot
+        is labelled.
+      operationId: createSimulationInput
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapshotCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/simulation-inputs/{input_id}:
+    get:
+      tags:
+      - simulation-inputs
+      summary: Get Snapshot
+      description: Retrieve a frozen version with its canonical SHA-256 for export.
+      operationId: getSimulationInput
+      security:
+      - APIKeyCookie: []
+      parameters:
+      - name: input_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Input Id
+      - name: X-CSRF-Token
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Csrf-Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Conflict
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    AssetResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        plot_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Plot Id
+        kind:
+          type: string
+          enum:
+          - soil
+          - crop
+          - weather
+          title: Kind
+        name:
+          type: string
+          title: Name
+        source:
+          type: string
+          title: Source
+        source_license:
+          type: string
+          title: Source License
+        content_hash:
+          type: string
+          title: Content Hash
+        actor_user_id:
+          type: string
+          format: uuid
+          title: Actor User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+      type: object
+      required:
+      - id
+      - organization_id
+      - plot_id
+      - kind
+      - name
+      - source
+      - source_license
+      - content_hash
+      - actor_user_id
+      - created_at
+      - payload
+      title: AssetResponse
+      description: Return the exact validated payload and hash on detail/create.
+    AssetSummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        plot_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Plot Id
+        kind:
+          type: string
+          enum:
+          - soil
+          - crop
+          - weather
+          title: Kind
+        name:
+          type: string
+          title: Name
+        source:
+          type: string
+          title: Source
+        source_license:
+          type: string
+          title: Source License
+        content_hash:
+          type: string
+          title: Content Hash
+        actor_user_id:
+          type: string
+          format: uuid
+          title: Actor User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - organization_id
+      - plot_id
+      - kind
+      - name
+      - source
+      - source_license
+      - content_hash
+      - actor_user_id
+      - created_at
+      title: AssetSummary
+      description: List only metadata; large CSV/parameter payloads require detail
+        access.
     AuditResponse:
       properties:
         id:
@@ -1501,6 +2194,85 @@ components:
       - actor_display_name
       title: AuditResponse
       description: Append-only metadata scoped to the current organization.
+    CropAssetCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Name
+        source:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Source
+        source_license:
+          type: string
+          maxLength: 300
+          minLength: 1
+          title: Source License
+        kind:
+          type: string
+          const: crop
+          title: Kind
+        plot_id:
+          type: 'null'
+          title: Plot Id
+        data:
+          $ref: '#/components/schemas/CropData'
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - source
+      - source_license
+      - kind
+      - data
+      title: CropAssetCreate
+      description: A crop parameter version is shared within the current organization.
+    CropData:
+      properties:
+        crop_code:
+          type: string
+          const: rice
+          title: Crop Code
+          default: rice
+        model_code:
+          type: string
+          const: WOFOST72
+          title: Model Code
+          default: WOFOST72
+        variety_name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Variety Name
+        applicable_region:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Applicable Region
+        parameters:
+          additionalProperties:
+            anyOf:
+            - type: number
+            - items:
+                type: number
+              type: array
+              maxItems: 200
+              minItems: 1
+          type: object
+          maxProperties: 150
+          minProperties: 1
+          title: Parameters
+      additionalProperties: false
+      type: object
+      required:
+      - variety_name
+      - applicable_region
+      - parameters
+      title: CropData
+      description: Only a declared rice parameter set; this is not an agronomic approval.
     ErrorDetail:
       properties:
         code:
@@ -1767,7 +2539,7 @@ components:
         version:
           type: string
           title: Version
-          default: 0.3.0
+          default: 0.4.0
         scope:
           type: string
           const: process
@@ -1798,6 +2570,20 @@ components:
       title: IdentityResponse
       description: Session-bound CSRF can be recovered after reload; the auth token
         stays HttpOnly.
+    IssueResponse:
+      properties:
+        code:
+          type: string
+          title: Code
+        message:
+          type: string
+          title: Message
+      type: object
+      required:
+      - code
+      - message
+      title: IssueResponse
+      description: A stable preflight code and plain-language next action.
     LoginInput:
       properties:
         username:
@@ -1849,6 +2635,29 @@ components:
       - created_at
       title: OrganizationResponse
       description: The currently authenticated farm team.
+    PageResponse_AssetSummary_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/AssetSummary'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        limit:
+          type: integer
+          title: Limit
+        offset:
+          type: integer
+          title: Offset
+      type: object
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      title: PageResponse[AssetSummary]
     PageResponse_AuditResponse_:
       properties:
         items:
@@ -1941,6 +2750,29 @@ components:
       - limit
       - offset
       title: PageResponse[SeasonResponse]
+    PageResponse_SnapshotSummary_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SnapshotSummary'
+          type: array
+          title: Items
+        total:
+          type: integer
+          title: Total
+        limit:
+          type: integer
+          title: Limit
+        offset:
+          type: integer
+          title: Offset
+      type: object
+      required:
+      - items
+      - total
+      - limit
+      - offset
+      title: PageResponse[SnapshotSummary]
     PageResponse_UserResponse_:
       properties:
         items:
@@ -2064,6 +2896,43 @@ components:
       - created_at
       title: PlotResponse
       description: Reported plot facts and derived hectares.
+    ReportResponse:
+      properties:
+        input_ready:
+          type: boolean
+          title: Input Ready
+        simulation_available:
+          type: boolean
+          const: false
+          title: Simulation Available
+        blocking_issues:
+          items:
+            $ref: '#/components/schemas/IssueResponse'
+          type: array
+          title: Blocking Issues
+        warnings:
+          items:
+            $ref: '#/components/schemas/IssueResponse'
+          type: array
+          title: Warnings
+        missing_weather_days:
+          type: integer
+          title: Missing Weather Days
+        missing_parameters:
+          items:
+            type: string
+          type: array
+          title: Missing Parameters
+      type: object
+      required:
+      - input_ready
+      - simulation_available
+      - blocking_issues
+      - warnings
+      - missing_weather_days
+      - missing_parameters
+      title: ReportResponse
+      description: Completeness cannot be confused with an executed/validated simulation.
     SeasonClose:
       properties:
         end_date:
@@ -2163,6 +3032,209 @@ components:
       - created_at
       title: SeasonResponse
       description: The rice season state and establishment facts.
+    SnapshotCreate:
+      properties:
+        season_id:
+          type: string
+          format: uuid
+          title: Season Id
+        soil_asset_id:
+          type: string
+          format: uuid
+          title: Soil Asset Id
+        crop_asset_id:
+          type: string
+          format: uuid
+          title: Crop Asset Id
+        weather_asset_id:
+          type: string
+          format: uuid
+          title: Weather Asset Id
+        emergence_date:
+          type: string
+          format: date
+          title: Emergence Date
+        cutoff_date:
+          type: string
+          format: date
+          title: Cutoff Date
+      additionalProperties: false
+      type: object
+      required:
+      - season_id
+      - soil_asset_id
+      - crop_asset_id
+      - weather_asset_id
+      - emergence_date
+      - cutoff_date
+      title: SnapshotCreate
+      description: Dates are explicit; the sowing/transplanting date is not assumed
+        to be emergence.
+    SnapshotResponse:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        season_id:
+          type: string
+          format: uuid
+          title: Season Id
+        version:
+          type: integer
+          title: Version
+        content_hash:
+          type: string
+          title: Content Hash
+        actor_user_id:
+          type: string
+          format: uuid
+          title: Actor User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        report:
+          $ref: '#/components/schemas/ReportResponse'
+        payload:
+          additionalProperties: true
+          type: object
+          title: Payload
+      type: object
+      required:
+      - id
+      - organization_id
+      - season_id
+      - version
+      - content_hash
+      - actor_user_id
+      - created_at
+      - report
+      - payload
+      title: SnapshotResponse
+      description: The complete frozen input can be downloaded as JSON.
+    SnapshotSummary:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        organization_id:
+          type: string
+          format: uuid
+          title: Organization Id
+        season_id:
+          type: string
+          format: uuid
+          title: Season Id
+        version:
+          type: integer
+          title: Version
+        content_hash:
+          type: string
+          title: Content Hash
+        actor_user_id:
+          type: string
+          format: uuid
+          title: Actor User Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        report:
+          $ref: '#/components/schemas/ReportResponse'
+      type: object
+      required:
+      - id
+      - organization_id
+      - season_id
+      - version
+      - content_hash
+      - actor_user_id
+      - created_at
+      - report
+      title: SnapshotSummary
+      description: Page snapshot versions and checks without duplicating all scientific
+        inputs.
+    SoilAssetCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Name
+        source:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Source
+        source_license:
+          type: string
+          maxLength: 300
+          minLength: 1
+          title: Source License
+        kind:
+          type: string
+          const: soil
+          title: Kind
+        plot_id:
+          type: string
+          format: uuid
+          title: Plot Id
+        data:
+          $ref: '#/components/schemas/SoilData'
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - source
+      - source_license
+      - kind
+      - plot_id
+      - data
+      title: SoilAssetCreate
+      description: A soil profile belongs to an authenticated team's plot.
+    SoilData:
+      properties:
+        wilting_point:
+          type: number
+          exclusiveMaximum: 1.0
+          minimum: 0.0
+          title: Wilting Point
+        field_capacity:
+          type: number
+          exclusiveMaximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Field Capacity
+        saturation:
+          type: number
+          maximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Saturation
+        depth_cm:
+          type: number
+          maximum: 500.0
+          exclusiveMinimum: 0.0
+          title: Depth Cm
+        sampled_on:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Sampled On
+      additionalProperties: false
+      type: object
+      required:
+      - wilting_point
+      - field_capacity
+      - saturation
+      - depth_cm
+      title: SoilData
+      description: Volumetric soil water fractions and measured/profile depth in centimetres.
     UserActive:
       properties:
         is_active:
@@ -2276,6 +3348,103 @@ components:
       - msg
       - type
       title: ValidationError
+    WeatherAssetCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 1
+          title: Name
+        source:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Source
+        source_license:
+          type: string
+          maxLength: 300
+          minLength: 1
+          title: Source License
+        kind:
+          type: string
+          const: weather
+          title: Kind
+        plot_id:
+          type: string
+          format: uuid
+          title: Plot Id
+        data:
+          $ref: '#/components/schemas/WeatherData'
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - source
+      - source_license
+      - kind
+      - plot_id
+      - data
+      title: WeatherAssetCreate
+      description: Weather is explicitly selected for a plot, with original CSV retained.
+    WeatherData:
+      properties:
+        source_kind:
+          type: string
+          enum:
+          - station
+          - gridded
+          title: Source Kind
+        station_id:
+          anyOf:
+          - type: string
+            maxLength: 80
+            minLength: 1
+          - type: 'null'
+          title: Station Id
+        latitude:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Latitude
+        longitude:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: Longitude
+        elevation_m:
+          type: number
+          maximum: 9000.0
+          minimum: -500.0
+          title: Elevation M
+        wind_height_m:
+          type: integer
+          const: 2
+          title: Wind Height M
+          default: 2
+        time_basis:
+          type: string
+          enum:
+          - Asia/Shanghai
+          - UTC
+          - LST
+          title: Time Basis
+        csv_text:
+          type: string
+          maxLength: 262144
+          minLength: 1
+          title: Csv Text
+      additionalProperties: false
+      type: object
+      required:
+      - source_kind
+      - latitude
+      - longitude
+      - elevation_m
+      - time_basis
+      - csv_text
+      title: WeatherData
+      description: CSV unit metadata differentiates a real station from a gridded
+        product.
   securitySchemes:
     APIKeyCookie:
       type: apiKey

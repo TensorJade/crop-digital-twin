@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
+import { request as httpRequest } from 'node:http'
 import { apiLogin, authorizedPost, browserLogin, testPassword } from './helpers'
 
 const pageErrors = new WeakMap<Page, string[]>()
@@ -175,21 +176,37 @@ test('administrator deactivation ends a members current session and reactivation
   }
 })
 
-test('changing forwarded headers cannot bypass the direct connection login failure limit', async ({
-  request,
-}) => {
-  await apiLogin(request)
-  for (let attempt = 0; attempt < 5; ++attempt) {
-    const response = await request.post('http://127.0.0.1:8019/api/v1/auth/login', {
-      data: { username: 'e2e_owner', password: 'invalid-e2e-passphrase' },
-      headers: { 'X-Forwarded-For': `192.0.2.${attempt + 1}` },
-    })
-    expect(response.status()).toBe(401)
-  }
-  const response = await request.post('http://127.0.0.1:8019/api/v1/auth/login', {
-    data: { username: 'e2e_owner', password: testPassword },
-    headers: { 'X-Forwarded-For': '192.0.2.200' },
+async function isolatedSourceLogin(password: string, forwarded: string) {
+  // A real second loopback source isolates this failure window from every other test.
+  return new Promise<{ status: number; retryAfter: string | undefined }>((resolve, reject) => {
+    const body = JSON.stringify({ username: 'e2e_owner', password })
+    const request = httpRequest(
+      'http://127.0.0.1:8019/api/v1/auth/login',
+      {
+        localAddress: '127.0.0.2',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'X-Forwarded-For': forwarded,
+        },
+      },
+      (response) => {
+        response.resume()
+        resolve({ status: response.statusCode || 0, retryAfter: response.headers['retry-after'] })
+      },
+    )
+    request.on('error', reject)
+    request.end(body)
   })
-  expect(response.status()).toBe(429)
-  expect(response.headers()['retry-after']).toBe('900')
+}
+
+test('changing forwarded headers cannot bypass the direct connection login failure limit', async () => {
+  for (let attempt = 0; attempt < 5; ++attempt) {
+    const response = await isolatedSourceLogin('invalid-e2e-passphrase', `192.0.2.${attempt + 1}`)
+    expect(response.status).toBe(401)
+  }
+  const response = await isolatedSourceLogin(testPassword, '192.0.2.200')
+  expect(response.status).toBe(429)
+  expect(response.retryAfter).toBe('900')
 })

@@ -1,3 +1,3 @@
-"""Reserved crop engine package; no crop algorithm is implemented in this scaffold."""
+"""Offline scientific input contracts; model execution and calibration remain pending."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

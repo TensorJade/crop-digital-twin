@@ -11,7 +11,7 @@ def test_health_reports_process_liveness() -> None:
     assert response.json() == {
         "status": "ok",
         "service": "crop-twin-api",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "scope": "process",
     }
 
@@ -34,5 +34,10 @@ def test_openapi_exposes_only_implemented_routes() -> None:
         "/api/v1/users",
         "/api/v1/users/{user_id}/active",
         "/api/v1/audit-events",
+        "/api/v1/input-assets",
+        "/api/v1/input-assets/{asset_id}",
+        "/api/v1/simulation-inputs/check",
+        "/api/v1/simulation-inputs",
+        "/api/v1/simulation-inputs/{input_id}",
     }
     assert schema["paths"]["/api/v1/health"]["get"]["operationId"] == "getApiHealth"

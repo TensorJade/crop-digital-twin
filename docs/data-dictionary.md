@@ -1,6 +1,6 @@
 # 数据字典与实际迁移
 
-总体目标包含 [20 张规划表](design-baseline/数据字典设计.json)与 [ER 图](diagrams/er_global.svg)。实际版本以 Alembic 0001、0002 与 ORM 为准，M1/M2 共八张业务表；规划图中的未来表尚未实施。
+总体目标包含 [20 张规划表](design-baseline/数据字典设计.json)与 [ER 图](diagrams/er_global.svg)。实际版本以 Alembic 0001、0002、0003 与 ORM 为准，当前共十张业务表；规划图中的未来表尚未实施。
 
 | 表 | 主键与逻辑关系 | 主要事实 | 约束/索引 |
 |---|---|---|---|
@@ -12,6 +12,8 @@
 | user_sessions | id UUID、user_id UUID | token_digest String(64)、csrf_token String(64)、created_at、expires_at | 令牌摘要唯一；用户/过期索引；到期晚于创建；固定 8 小时 |
 | login_limits | id UUID | source_key String(64)、failures Integer、window_start | 直接来源摘要唯一；0–5 次失败；15 分钟窗口 |
 | audit_events | id UUID、organization_id、actor_user_id、entity_id UUID | action String(64)、entity_type String(32)、created_at | 组织/时间/ID 分页索引；与业务同事务追加 |
+| input_assets | id UUID、organization_id、plot_id 可空、actor_user_id | kind、name String(100)、source String(1000)、source_license String(300)、payload JSON、content_hash String(64)、created_at | 三种类型检查；品种不指定地块、其余必填；组织/类型/地块/时间/ID 索引 |
+| simulation_inputs | id UUID、organization_id、season_id、actor_user_id | version Integer、payload JSON、content_hash String(64)、created_at | version >= 1；季节/版本唯一；组织/季节/时间/ID 索引 |
 
 数据库关系使用应用维护的逻辑外键。组织范围沿 plot → season → management_event 检查；新地块必须由服务端赋当前组织，客户端不能指定归属。0002 不篡改旧地块内容；只有明确初始化接收才补组织并写审计。账号停用/密码修改会删除相应会话。审计展示的 actor_display_name 由本组织用户查询关联得到，不复制入审计表。
 
@@ -19,4 +21,6 @@
 
 保存原始亩数，响应派生公顷。标准水量为 mm、肥料产品质量为 kg/ha，不是入渗水或纯氮量。Decimal 响应为字符串，日期为 ISO。时间写入 UTC，SQLite 读回补 UTC。
 
-事务与锁见 [ADR 0002](adr/0002-farm-module.md)和 [ADR 0003](adr/0003-identity.md)。无业务物理删除接口；绕过应用的 SQL 仍可能破坏关系，需限制运维写权限。农事 is_current 由后继关系派生，原始农事不更新；crop_code=rice 为模块常量。双数据库集成测试执行 Alembic check 检查迁移与 ORM 一致。
+事务与锁见 [ADR 0002](adr/0002-farm-module.md)、[ADR 0003](adr/0003-identity.md)和 [ADR 0004](adr/0004-simulation-inputs.md)。无业务物理删除接口；绕过应用的 SQL 仍可能破坏关系，需限制运维写权限。农事 is_current 由后继关系派生，原始农事不更新；crop_code=rice 为模块常量。双数据库集成测试执行 Alembic check 检查迁移与 ORM 一致。
+
+输入 payload 有明确土壤/品种/天气结构，天气原始 CSV 和解析日值同时保存；资料最多 512 KiB、CSV 256 KiB/366天、快照 1 MiB。快照持久化地块/季节/三份资料/截止前最新农事/标准天气/报告，原版本不更新。SHA-256 覆盖规范 payload，整数值浮点统一为整数；它不代替数字签名或模型验证。详见 [输入模块](modules/simulation-inputs.md)。

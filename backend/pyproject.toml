@@ -4,10 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crop-twin-api"
-version = "0.3.0"
+version = "0.4.0"
 description = "Farm management API for a crop digital twin"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+  "crop-twin-engine",
   "fastapi==0.142.4",
   "pydantic-settings==2.15.0",
   "python-dotenv>=1,<2",

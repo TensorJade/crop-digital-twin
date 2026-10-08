@@ -27,6 +27,9 @@ REQUIRED = [
     "frontend/src/features/identity/LoginPage.vue",
     "docs/modules/identity.md",
     "scripts/create_admin.py",
+    "backend/migrations/versions/0003_simulation_inputs.py",
+    "frontend/src/features/simulation/SimulationInputsPanel.vue",
+    "docs/modules/simulation-inputs.md",
 ]
 
 
@@ -45,9 +48,12 @@ def main() -> None:
         "/api/v1/auth/me",
         "/api/v1/users",
         "/api/v1/audit-events",
+        "/api/v1/input-assets",
+        "/api/v1/simulation-inputs/check",
+        "/api/v1/simulation-inputs",
     }
     if not required_routes <= schema["paths"].keys():
-        raise SystemExit("An implemented M1 route is missing.")
+        raise SystemExit("An implemented module route is missing.")
     operation_ids: list[str] = []
     for path, operations in schema["paths"].items():
         for method, operation in operations.items():
