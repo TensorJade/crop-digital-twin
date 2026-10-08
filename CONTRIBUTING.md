@@ -16,6 +16,8 @@ git commit -m "feat(plots): add plot domain model"
 
 初始化特例：空仓库没有 master/release 历史，因此首个骨架提交在 `codex/feature_scaffold_20261008` 上建立，再建立本地 master、develop、test、release_20261008 基线指针。该基线是开发骨架，不是产品发布。见 [ADR 0001](docs/adr/0001-workspace-baseline.md)。
 
-本地分支名不会产生平台保护权限。尚未配置远程地址、分支保护、实际评审或远程 CI。首次接入远程时，由负责人设置 master、develop、test、release_* 的保护规则和检查要求。
+远程 `origin` 为 `https://github.com/TensorJade/crop-digital-twin.git`。当前已发布并跟踪 `codex/feature_scaffold_20261008`；master、develop、test、release_20261008 仍仅为本地初始化基线。后续发布基线分支和设置默认分支时，由负责人同步设置分支保护与检查要求。
+
+本地分支名不会产生平台保护权限。本次推送未配置分支保护或完成正式评审；GitHub Actions 已触发，其结论以具体提交的运行页面为准。日常功能继续在功能分支开发、记录日志并复核提交，再按已授权的范围推送。
 
 不要提交 `.env`、数据集、影像、运行日志、备份、依赖或构建输出。仅存储非敏感小型示例与来源清单；已跟踪文件不会自动受后续 `.gitignore` 规则保护。

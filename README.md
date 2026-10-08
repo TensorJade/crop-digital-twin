@@ -66,7 +66,7 @@ Set-Location 'D:\Dev\软著\crop-digital-twin'
 
 - PostgreSQL/PostGIS 计划保存业务、空间与版本数据；Redis 计划保存缓存及任务协调状态；影像存放对象存储。当前只有开发数据库 Compose 配置，API 尚未接入。
 - `.env.example` 仅为配置模板。运行数据库前复制为 `.env` 并修改本地密码；`.env`、原始影像、备份、日志和依赖目录不提交。
-- `.git/` 已初始化。工作流见 [CONTRIBUTING.md](CONTRIBUTING.md)；尚未配置远程仓库，CI 配置尚未在远程平台执行。
+- 远程 `origin`：[TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)。代码与开发日志已首次推送至 `codex/feature_scaffold_20261008`，并设置上游跟踪。工作流见 [CONTRIBUTING.md](CONTRIBUTING.md)；同步记录见 [GitHub 同步日志](docs/dev-log/2026-10-08-github-sync.md)。GitHub Actions 已触发，具体运行结论以对应提交的检查页面为准。
 - 原有 `..\wofost_lai_edge` 保持独立。后续复用需检查许可证、参数来源及农艺验证结果，不能将演示曲线当成成熟作物模型。
 
 下一步先完成地块、种植季、管理事件与持久化，再实现可复现的 PCSE 适配，最后接入地图和遥感校准。验收条件见 [requirements.md](docs/requirements.md)。
