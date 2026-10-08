@@ -57,7 +57,7 @@
 
 ## Git 与远程验证
 
-实现提交与远程CI待推送后核验并记录。当前未合并保护分支、未公开部署，无指定人工审查者；不把工具检查称为人工审核。
+实现提交7631c73c2d50af0718791f72044279509f836b37已推送。首次[CI运行37782416824](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782416824)的前端22项单元/13条Chromium流程通过（29.3s），Python在Linux的mypy步骤失败，后端测试尚未执行。Linux不识别条件表达式中的Windows专用subprocess.CREATE_NO_WINDOW；Windows本地检查通过，Linux平台本地复现同一错误。改为显式sys.platform分支，本地两平台类型检查均通过；CI增加Windows、本地check增加Linux检查。修正后生长流程重测时首次未选择Edge，本机没有Chromium而无法启动浏览器，随后明确使用已安装Edge复核。新提交的双数据库/浏览器验证待核验。当前未合并保护分支、未公开部署，无指定人工审查者；不把工具检查称为人工审核。
 
 ## 下一步
 

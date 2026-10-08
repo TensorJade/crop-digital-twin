@@ -45,12 +45,15 @@ def main() -> None:
             )
     finally:
         engine.dispose()
+    creation_flags = 0
+    if sys.platform == "win32":
+        creation_flags = subprocess.CREATE_NO_WINDOW
     worker = subprocess.Popen(
         [sys.executable, str(root / "scripts/simulation_worker.py")],
         cwd=root,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
-        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        creationflags=creation_flags,
     )
     try:
         uvicorn.run("crop_twin.main:app", host="127.0.0.1", port=8019, proxy_headers=False)

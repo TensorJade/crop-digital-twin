@@ -7,6 +7,7 @@ try {
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'ruff', 'check', 'backend', 'packages', 'scripts')
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'ruff', 'format', '--check', 'backend', 'packages', 'scripts')
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'mypy')
+    Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'mypy', '--platform', 'linux')
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'pytest', '--cov=crop_twin', '--cov=crop_engine', '--cov-report=term-missing', '--cov-fail-under=80')
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'python', 'scripts/export_openapi.py', '--check')
     Invoke-Checked $uvExecutable @('run', '--locked', '--no-sync', 'python', 'scripts/check_workspace.py')
