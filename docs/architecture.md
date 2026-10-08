@@ -17,7 +17,9 @@ flowchart LR
     MAP[授权卫星底图] --> WEB
 ```
 
-上图是目标结构。当前实现仅覆盖 WEB 开发首页 → API 进程健康检查；APP、DB 接入、Q、W、E、天气、地图与对象存储均未实现。
+上图是目标结构。当前 M1 已覆盖 Vue 农田页面 → FastAPI → FarmService/领域规则 → SQLAlchemy → SQLite/PostgreSQL；Q、W、E、天气、地图与对象存储未实现。本地默认 SQLite，Redis 暂不接入。
+
+实际数据流见 [M1 数据流图](modules/farm-management.md)。前端的三个表单与状态集中于 features/farm，后端业务对象集中于 domain/farm；HTTP、用例、规则和 SQL 分层。
 
 业务主数据以 SQL 为权威来源；Redis 不承载唯一业务事实；大影像采用对象存储，SQL 保存路径、版本、校验和和来源。模拟输入快照、管理事件、原始预测、遥感观测与校准结果分别留存，历史不得被无记录覆盖。
 
@@ -33,4 +35,4 @@ flowchart LR
 - infrastructure 层实现存储、天气与消息适配。
 - crop_engine 只接受算法数据契约；不直接读 UI、HTTP 请求或数据库。
 
-当前依赖为可运行开发入口选择；实际农业、GIS 与队列依赖按模块实现再引入。部署、资源容量和 SLA 以试点测量为准，不以骨架测试推断。
+M1 引入 SQLAlchemy、Alembic、Psycopg 和 Playwright，用于真实存储、迁移与跨层验收。农业、GIS 与队列依赖按模块需要引入。部署、资源容量和 SLA 以试点测量为准，不以功能测试推断。

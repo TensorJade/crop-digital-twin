@@ -8,10 +8,10 @@
 
 ```powershell
 git status --short
-git switch -c yourname/feature_plots_20261009 release_20261008
-git add backend/src/crop_twin/domain/plots docs/dev-log
+git switch -c yourname/feature_farm_20261009 release_20261008
+git add backend/src/crop_twin/domain/farm docs/dev-log
 git diff --cached
-git commit -m "feat(plots): add plot domain model"
+git commit -m "feat(farm): add farm business rules"
 ```
 
 初始化特例：空仓库没有 master/release 历史，因此首个骨架提交在 `codex/feature_scaffold_20261008` 上建立，再建立本地 master、develop、test、release_20261008 基线指针。该基线是开发骨架，不是产品发布。见 [ADR 0001](docs/adr/0001-workspace-baseline.md)。

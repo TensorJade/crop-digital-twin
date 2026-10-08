@@ -1,4 +1,4 @@
-# Database services only; API and workers are not connected yet.
+# Development databases; M1 can use PostgreSQL, Redis is reserved for future tasks.
 name: crop-twin-dev
 services:
   postgres:

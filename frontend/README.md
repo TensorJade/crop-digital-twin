@@ -1,7 +1,17 @@
-# 前端（TypeScript / Vue 单文件组件 / CSS）
+# 前端（TypeScript / Vue SFC / CSS）
 
-`src/app` 放启动、路由与状态；`pages` 放完整页面；`components` 放通用组件；`features` 放地块、农事、影像、长势模块；`maps` 隔离底图服务和矢量样式；`api` 放 HTTP 客户端与契约类型；`types` 放共享业务类型；`styles` 放样式。
+华南水稻页面：选地块 → 选种植季 → 记农事。features/farm 集中业务组件、API 类型与局部状态；pages/FarmPage.vue 组合页面，components 仅放通用分页。
 
-当前仅有开发首页和手写的健康检查客户端，尚未引入 Router、Pinia 或地图 SDK。`api/generated` 预留契约生成位置；不能把当前手写客户端称为自动生成代码。未来按功能需要添加依赖及对应测试。
+切换地块/季节按请求代次丢弃过期响应。数量展示原始单位及换算量，默认隐藏旧版，修正保留原因。支持桌面与手机布局。
 
-Vite 开发代理仅供本地联调；`dist` 构建后的 API 路由需通过正式代理配置提供。`preview` 不提供生产部署保证。
+尚无跨页状态需求，未加入 Router/Pinia；地图 SDK 等按模块引入。类型目前手写，真实接口以 contracts/openapi.* 为准。
+
+```text
+npm run typecheck / lint / format:check / test / build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright 自动启动 8019 API、5179 Vite 和已迁移临时 SQLite。Windows 可运行根目录 scripts/check-e2e.ps1 -BrowserChannel msedge。*.test.ts 为单元，tests/e2e/*.spec.ts 为浏览器测试，各运行器分别发现文件。
+
+Vite 代理仅供联调；dist 的 API 请求需正式代理。当前无生产发布、账户、地图或科学模拟。

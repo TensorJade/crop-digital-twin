@@ -19,6 +19,10 @@ REQUIRED = [
     "docs/diagrams/dfd_level1.svg",
     "infra/compose/compose.dev.yaml",
     "scripts/bootstrap.ps1",
+    "scripts/init_db.py",
+    "backend/migrations/versions/0001_farm_records.py",
+    "docs/modules/farm-management.md",
+    "frontend/src/features/farm/ManagementPanel.vue",
 ]
 
 
@@ -28,8 +32,22 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing files: {', '.join(missing)}")
     schema = json.loads((ROOT / "contracts/openapi.json").read_text(encoding="utf-8"))
-    if set(schema["paths"]) != {"/api/v1/health"}:
-        raise SystemExit("Review route inventory and update requirements before expanding API.")
+    required_routes = {
+        "/api/v1/health",
+        "/api/v1/plots",
+        "/api/v1/seasons",
+        "/api/v1/management-events",
+    }
+    if not required_routes <= schema["paths"].keys():
+        raise SystemExit("An implemented M1 route is missing.")
+    operation_ids: list[str] = []
+    for path, operations in schema["paths"].items():
+        for method, operation in operations.items():
+            if method not in {"get", "post"}:
+                raise SystemExit(f"Undocumented HTTP method policy change: {method} {path}")
+            operation_ids.append(operation["operationId"])
+    if len(operation_ids) != len(set(operation_ids)):
+        raise SystemExit("API operation identifiers must be unique.")
     print(f"Workspace structure checked ({len(REQUIRED)} required files).")
 
 

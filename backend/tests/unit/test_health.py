@@ -11,12 +11,20 @@ def test_health_reports_process_liveness() -> None:
     assert response.json() == {
         "status": "ok",
         "service": "crop-twin-api",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "scope": "process",
     }
 
 
 def test_openapi_exposes_only_implemented_routes() -> None:
     schema = create_app().openapi()
-    assert set(schema["paths"]) == {"/api/v1/health"}
+    assert set(schema["paths"]) == {
+        "/api/v1/health",
+        "/api/v1/plots",
+        "/api/v1/plots/{plot_id}",
+        "/api/v1/seasons",
+        "/api/v1/seasons/{season_id}/close",
+        "/api/v1/management-events",
+        "/api/v1/management-events/{event_id}/corrections",
+    }
     assert schema["paths"]["/api/v1/health"]["get"]["operationId"] == "getApiHealth"

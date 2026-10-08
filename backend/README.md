@@ -1,7 +1,11 @@
 # 后端（Python / FastAPI）
 
-`main.py` 为应用入口；`api/v1` 负责 HTTP 契约；`application` 编排业务用例与事务；`domain` 保持业务规则独立；`infrastructure` 实现数据库、天气、对象存储与消息适配；`workers` 承载未来的重计算任务。
+0.2.0 实现本地农田管理。api/v1 校验 HTTP，application 编排用例，domain/farm 保存纯规则，infrastructure/database 实现 SQL。FarmService 仅依赖一个存储 Protocol，不依赖 FastAPI/SQLAlchemy。
 
-目前只实现 `GET /api/v1/health`（无请求体、无需认证、200 JSON、仅进程存活）。开发连接采用本机 HTTP；正式部署需 HTTPS。自动接口文档在 `/docs`，实际契约在根目录 `contracts/openapi.*`。
+已实现地块、种植季和农事的查询/创建，以及结束季节和追加农事修订。接口见 docs/modules/farm-management.md、/docs 和 contracts。存活接口不表示数据库就绪。
 
-尚无 ORM、数据库连接、迁移、登录、业务接口、任务 worker 或生产部署。保留的 `.gitkeep` 目录仅表示模块位置。
+默认 SQLite，可配置 PostgreSQL/Psycopg。先运行 scripts/init-db.ps1 显式迁移，再启动；API 不自行建表。每请求一个事务，提交后返回成功，失败回滚；SQLite BEGIN IMMEDIATE，PostgreSQL 父对象行锁。
+
+tests/integration 使用临时 SQLite 或 UUID 命名的 PostgreSQL schema，验证实际存储、并发、日期、单位和历史；服务器测试通过 CROP_TWIN_TEST_POSTGRES_URL 显式启用。
+
+账户、worker、模型未实现；production 模式拒绝启动。公开服务前完成 M2 与 HTTPS。
