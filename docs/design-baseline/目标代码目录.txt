@@ -1,0 +1,79 @@
+crop-digital-twin/
+├─ README.md
+├─ docs/
+│  ├─ requirements.md             # 需求与验收追踪
+│  ├─ architecture.md             # 架构与部署
+│  ├─ data-dictionary.md          # 字段、单位与版本
+│  ├─ model-validation.md         # 农艺验证方案
+│  ├─ diagrams/                  # 图形描述源文件
+│  ├─ adr/                       # 架构决策记录
+│  └─ runbooks/                  # 备份、恢复和故障处理
+├─ contracts/
+│  ├─ openapi.yaml
+│  └─ schemas/                   # 参数与快照 JSON Schema
+├─ frontend/                     # TypeScript 与 Vue
+├─ backend/                      # Python API 与领域服务
+├─ packages/crop_engine/         # Python 算法与适配器
+├─ model-assets/                 # 小型配置与资产清单
+├─ tests/e2e/                    # 跨服务端到端测试
+├─ infra/                        # 部署与基础设施配置
+└─ scripts/                      # 维护、迁移与验证脚本
+
+frontend/
+├─ src/
+│  ├─ app/                       # 路由、状态和启动
+│  ├─ pages/                     # 地块、农事、影像和管理页
+│  ├─ components/                # 表单、状态卡和通用控件
+│  ├─ features/
+│  │  ├─ plots/
+│  │  ├─ management/
+│  │  ├─ imagery/
+│  │  └─ growth/
+│  ├─ maps/                      # 底图与矢量适配器
+│  ├─ api/generated/             # 从 OpenAPI 生成的客户端
+│  ├─ types/
+│  └─ styles/
+├─ tests/
+└─ package.json                  # 锁文件一并提交
+
+backend/
+├─ src/crop_twin/
+│  ├─ main.py
+│  ├─ api/v1/                    # 路由与请求响应模型
+│  ├─ application/               # 用例、快照与事务编排
+│  ├─ domain/
+│  │  ├─ identity/
+│  │  ├─ plots/
+│  │  ├─ seasons/
+│  │  ├─ management/
+│  │  ├─ observations/
+│  │  └─ simulation/
+│  ├─ infrastructure/
+│  │  ├─ database/
+│  │  ├─ object_store/
+│  │  ├─ weather/
+│  │  └─ messaging/
+│  ├─ workers/                   # 影像、模型、调度与恢复
+│  └─ core/                      # 配置、日志、认证和错误
+├─ migrations/
+├─ tests/unit/
+├─ tests/integration/
+└─ pyproject.toml
+
+packages/crop_engine/
+├─ src/crop_engine/
+│  ├─ contracts.py               # 算法输入输出约定
+│  ├─ pcse_adapter.py
+│  ├─ weather_units.py
+│  ├─ management_adapter.py
+│  ├─ imagery/                   # 质控、指数与反演
+│  ├─ calibration/               # 参数先验和有界校准
+│  └─ provenance.py              # 来源与版本
+└─ tests/
+
+infra/
+├─ compose/                     # 开发、测试和正式配置
+├─ docker/                      # API 与计算镜像
+├─ proxy/                       # HTTPS 与资源路由
+├─ monitoring/
+└─ backup/

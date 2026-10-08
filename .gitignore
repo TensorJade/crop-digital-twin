@@ -1,0 +1,39 @@
+# Local secrets and machine settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+
+# Environments and dependencies
+.venv/
+.tools/
+**/node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Outputs and local data (keep explanatory READMEs)
+**/dist/
+**/build/
+frontend/coverage/
+*.tsbuildinfo
+data/*
+!data/README.md
+runtime/*
+!runtime/README.md
+backups/*
+!backups/README.md
+test-results/
+playwright-report/
+*.log
+*.sqlite
+*.sqlite3

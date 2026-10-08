@@ -1,0 +1,66 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Crop Digital Twin API",
+    "description": "Development scaffold. Only process liveness is implemented.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Get Health",
+        "description": "Return process liveness without asserting model or database availability.",
+        "operationId": "getApiHealth",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "service": {
+            "type": "string",
+            "const": "crop-twin-api",
+            "title": "Service",
+            "default": "crop-twin-api"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "0.1.0"
+          },
+          "scope": {
+            "type": "string",
+            "const": "process",
+            "title": "Scope",
+            "default": "process"
+          }
+        },
+        "type": "object",
+        "title": "HealthResponse",
+        "description": "API process status. This is not dependency readiness."
+      }
+    }
+  }
+}

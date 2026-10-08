@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crop-twin-api"
+version = "0.1.0"
+description = "Crop digital twin API development scaffold"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.142.4",
+  "pydantic-settings==2.15.0",
+  "python-dotenv>=1,<2",
+  "uvicorn>=0.35,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crop_twin"]

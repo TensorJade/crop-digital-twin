@@ -1,0 +1,44 @@
+[project]
+name = "crop-digital-twin-workspace"
+version = "0.1.0"
+description = "Local development workspace for crop digital twin"
+requires-python = ">=3.12,<3.13"
+dependencies = ["crop-twin-api", "crop-twin-engine"]
+
+[dependency-groups]
+dev = [
+  "httpx2>=2.13,<3",
+  "mypy>=1.15,<2",
+  "pytest>=8,<10",
+  "pytest-cov>=6,<8",
+  "pyyaml>=6,<7",
+  "ruff>=0.11,<1",
+  "types-PyYAML>=6,<7",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["backend", "packages/crop_engine"]
+
+[tool.uv.sources]
+crop-twin-api = { workspace = true }
+crop-twin-engine = { workspace = true }
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests", "packages/crop_engine/tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = ["backend/src", "packages/crop_engine/src"]
+files = ["backend/src", "packages/crop_engine/src", "scripts/export_openapi.py", "scripts/check_workspace.py"]

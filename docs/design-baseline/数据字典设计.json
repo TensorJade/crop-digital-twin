@@ -1,0 +1,2165 @@
+{
+  "title": "作物数字孪生系统字段级数据字典设计",
+  "version": "V1.0",
+  "date": "2026-10-08",
+  "status": "设计基线，尚未生成或执行 SQL 迁移",
+  "conventions": [
+    "默认值 null 表示未设置数据库默认值；不表示业务值为零或允许空值。",
+    "所有时间戳以 timestamptz 保存，模型日期按种植季 timezone 单独对齐。",
+    "物理外键为项目适配建议；删除默认 RESTRICT，审计与正式输入版本保留。",
+    "同组织关系与泛型引用由领域服务校验；实施时评估复合外键和 PostgreSQL RLS。",
+    "组织管理员和地块授权来自认证上下文；不以客户端 organization_id 作为授权依据。",
+    "JSONB 字段必须有版本化 Schema；默认不设置空对象以免隐藏缺失输入。",
+    "校准用的 accepted 观测必须有数值及验证过的误差处理规则，空间缺测不置零。",
+    "正式历史记录追加保存；删除和保留周期需满足业务、审计及授权要求。",
+    "列举的 checks 包含数据库 CHECK 与领域规则；跨行、JSON 和模型适用性检查由服务执行。",
+    "地块查询按 COALESCE(root_record_id,id) 取最新修订，历史季保留准确 plot_revision_id。",
+    "模拟输入由事务冻结为清单与快照；完成任务不能读取实时输入后覆盖快照。",
+    "词典枚举和字段名需与 OpenAPI、ORM 和实际 SQL 迁移一起评审锁定。"
+  ],
+  "tables": [
+    {
+      "name": "organizations",
+      "purpose": "组织与农场主体",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "name",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "组织名称"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'active'",
+          "meaning": "active / suspended / archived"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "修改时间；由应用或触发器更新"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [],
+      "checks": [],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "users",
+      "purpose": "登录主体；同一用户可加入多个组织",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "login_name",
+          "sql_type": "varchar(160)",
+          "nullable": false,
+          "default": null,
+          "meaning": "规范化登录名，避免存放明文身份凭据"
+        },
+        {
+          "name": "display_name",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "显示名称"
+        },
+        {
+          "name": "password_hash",
+          "sql_type": "text",
+          "nullable": true,
+          "default": null,
+          "meaning": "本地登录使用的安全密码哈希；外部身份认证可空"
+        },
+        {
+          "name": "external_subject",
+          "sql_type": "varchar(200)",
+          "nullable": true,
+          "default": null,
+          "meaning": "外部身份提供方的稳定标识；本地账号可空"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'active'",
+          "meaning": "active / disabled"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "账号修改时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "login_name"
+        ],
+        [
+          "external_subject"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "密码哈希或外部身份标识至少存在一项"
+      ],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "memberships",
+      "purpose": "组织成员与角色；地块授权范围需单独校验",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "user_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "成员用户",
+          "references": "users.id"
+        },
+        {
+          "name": "role_code",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "farmer / manager / remote_operator / agronomist / administrator"
+        },
+        {
+          "name": "plot_scope",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "受版本化 Schema 约束的地块授权清单或组织范围规则"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'active'",
+          "meaning": "active / disabled"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "权限修改时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "organization_id",
+          "user_id"
+        ]
+      ],
+      "indexes": [
+        "user_id"
+      ],
+      "checks": [],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "plots",
+      "purpose": "地块及边界修订；首条记录为业务根，后续记录引用该根",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "root_record_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "首版地块编号；首版本身为空",
+          "references": "plots.id"
+        },
+        {
+          "name": "revision",
+          "sql_type": "integer",
+          "nullable": false,
+          "default": "1",
+          "meaning": "从 1 起的修订号"
+        },
+        {
+          "name": "name",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "地块名称"
+        },
+        {
+          "name": "geometry",
+          "sql_type": "geometry(MultiPolygon,4326)",
+          "nullable": false,
+          "default": null,
+          "meaning": "经质量检查的分析边界；采用 WGS84"
+        },
+        {
+          "name": "source_crs",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "原始坐标参考；显示供应商坐标另行转换"
+        },
+        {
+          "name": "source_geometry",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "原始带 CRS 的边界，供追溯"
+        },
+        {
+          "name": "transform_version",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "坐标处理版本"
+        },
+        {
+          "name": "area_m2",
+          "sql_type": "double precision",
+          "nullable": false,
+          "default": null,
+          "meaning": "通过合适投影或 geography 计算的面积，平方米"
+        },
+        {
+          "name": "revision_reason",
+          "sql_type": "text",
+          "nullable": false,
+          "default": null,
+          "meaning": "变更理由；首版为建档理由"
+        },
+        {
+          "name": "created_by",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "建档或修订人员",
+          "references": "users.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "GIST(geometry)",
+        "organization_id, name",
+        "UNIQUE(COALESCE(root_record_id,id), revision)"
+      ],
+      "checks": [
+        "revision >= 1",
+        "area_m2 > 0",
+        "ST_IsValid(geometry)",
+        "修订记录与业务根属于同一组织"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "parameter_sets",
+      "purpose": "品种、土壤、站点及模型配置的不可变版本",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "私有配置所属组织；审核的公共库可空",
+          "references": "organizations.id"
+        },
+        {
+          "name": "kind",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "crop / soil / site / model_profile"
+        },
+        {
+          "name": "code",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "配置业务编码"
+        },
+        {
+          "name": "version",
+          "sql_type": "varchar(48)",
+          "nullable": false,
+          "default": null,
+          "meaning": "发布版本"
+        },
+        {
+          "name": "schema_version",
+          "sql_type": "varchar(48)",
+          "nullable": false,
+          "default": null,
+          "meaning": "参数 Schema 版本"
+        },
+        {
+          "name": "parameters",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "参数值、单位、适用区域、作物及管理能力"
+        },
+        {
+          "name": "validation_status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "draft / reviewed / validated / retired"
+        },
+        {
+          "name": "validation_evidence",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "来源、审核和独立验证证据"
+        },
+        {
+          "name": "content_hash",
+          "sql_type": "char(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "规范化参数内容 SHA-256"
+        },
+        {
+          "name": "created_by",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "配置提交人员",
+          "references": "users.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "UNIQUE(COALESCE(organization_id,'00000000-0000-0000-0000-000000000000'::uuid),kind,code,version)"
+      ],
+      "checks": [],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "crop_seasons",
+      "purpose": "一块田的一次种植季及当前输入修订号",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "plot_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "业务根地块编号",
+          "references": "plots.id"
+        },
+        {
+          "name": "plot_revision_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "当前采用的准确边界版本",
+          "references": "plots.id"
+        },
+        {
+          "name": "crop_code",
+          "sql_type": "varchar(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "作物编码"
+        },
+        {
+          "name": "variety_code",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "品种编码"
+        },
+        {
+          "name": "start_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "模型起始日期；含起始方式的定义"
+        },
+        {
+          "name": "end_date",
+          "sql_type": "date",
+          "nullable": true,
+          "default": null,
+          "meaning": "实际或计划结束日期，尚未确定可空"
+        },
+        {
+          "name": "timezone",
+          "sql_type": "varchar(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "IANA 时区，用于模型日界线"
+        },
+        {
+          "name": "establishment_mode",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "播种、移栽等起始方式；须符合模型配置"
+        },
+        {
+          "name": "crop_parameter_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "准确品种参数版本",
+          "references": "parameter_sets.id"
+        },
+        {
+          "name": "soil_parameter_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "准确土壤参数版本",
+          "references": "parameter_sets.id"
+        },
+        {
+          "name": "site_parameter_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "准确站点参数版本",
+          "references": "parameter_sets.id"
+        },
+        {
+          "name": "profile_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "已验证模型配置版本",
+          "references": "parameter_sets.id"
+        },
+        {
+          "name": "input_revision",
+          "sql_type": "bigint",
+          "nullable": false,
+          "default": "1",
+          "meaning": "影响模拟的输入每次变更递增"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'planned'",
+          "meaning": "planned / active / completed / archived"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "最近业务修改时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "organization_id, plot_id, start_date"
+      ],
+      "checks": [
+        "end_date IS NULL OR end_date >= start_date",
+        "input_revision >= 1",
+        "同一业务地块的活动季重叠按实际种植制度进行服务端校验"
+      ],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "management_events",
+      "purpose": "追加保存农事及其修订，历史值用于运行追溯",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "crop_season_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属种植季",
+          "references": "crop_seasons.id"
+        },
+        {
+          "name": "root_record_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "首次记录编号；首版为空",
+          "references": "management_events.id"
+        },
+        {
+          "name": "revision",
+          "sql_type": "integer",
+          "nullable": false,
+          "default": "1",
+          "meaning": "事件修订号"
+        },
+        {
+          "name": "occurred_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "农事实际发生时间"
+        },
+        {
+          "name": "recorded_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "信息进入系统时间"
+        },
+        {
+          "name": "kind",
+          "sql_type": "varchar(40)",
+          "nullable": false,
+          "default": null,
+          "meaning": "灌溉、施肥、播种、收获或其他农事类型"
+        },
+        {
+          "name": "quantity",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "投入数量；无数量的事件可空"
+        },
+        {
+          "name": "unit",
+          "sql_type": "varchar(32)",
+          "nullable": true,
+          "default": null,
+          "meaning": "数量单位；必须与事件类型一致"
+        },
+        {
+          "name": "details",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "面积、有效养分、灌溉方式等经 Schema 校验的信息"
+        },
+        {
+          "name": "revision_reason",
+          "sql_type": "text",
+          "nullable": false,
+          "default": null,
+          "meaning": "修订或撤销理由"
+        },
+        {
+          "name": "is_void",
+          "sql_type": "boolean",
+          "nullable": false,
+          "default": "false",
+          "meaning": "撤销版本的标识"
+        },
+        {
+          "name": "idempotency_key",
+          "sql_type": "varchar(160)",
+          "nullable": false,
+          "default": null,
+          "meaning": "组织范围内的重复请求保护键"
+        },
+        {
+          "name": "request_hash",
+          "sql_type": "char(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "请求内容 SHA-256"
+        },
+        {
+          "name": "recorded_by",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "记录人员",
+          "references": "users.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "organization_id",
+          "idempotency_key"
+        ]
+      ],
+      "indexes": [
+        "crop_season_id, occurred_at",
+        "UNIQUE(COALESCE(root_record_id,id), revision)"
+      ],
+      "checks": [
+        "quantity IS NULL OR quantity >= 0",
+        "数量和单位必须同时存在或同时为空"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "weather_datasets",
+      "purpose": "一次发布或抓取的天气版本及其来源",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "source",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "气象站、格点或数据供应商"
+        },
+        {
+          "name": "source_kind",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "station / grid / manual"
+        },
+        {
+          "name": "location_key",
+          "sql_type": "varchar(160)",
+          "nullable": false,
+          "default": null,
+          "meaning": "站点或格点稳定编码"
+        },
+        {
+          "name": "location",
+          "sql_type": "geometry(Point,4326)",
+          "nullable": false,
+          "default": null,
+          "meaning": "数据对应的站点或格点位置"
+        },
+        {
+          "name": "issued_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "数据来源的发布时间；若来源未提供则保存抓取时间并注明"
+        },
+        {
+          "name": "available_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "系统实际取得该版本的时间"
+        },
+        {
+          "name": "data_kind",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "observation / forecast / reconstructed"
+        },
+        {
+          "name": "timezone",
+          "sql_type": "varchar(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "原始日值边界的时区"
+        },
+        {
+          "name": "version",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "版本号或内容编码"
+        },
+        {
+          "name": "metadata",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "单位、日界线、距离、授权、缺测及插补方法"
+        },
+        {
+          "name": "raw_asset_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "原始响应资产，不能包含供应商密钥",
+          "references": "assets.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "organization_id",
+          "source",
+          "location_key",
+          "version"
+        ]
+      ],
+      "indexes": [
+        "GIST(location)",
+        "available_at"
+      ],
+      "checks": [],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "weather_records",
+      "purpose": "一个天气版本下的标准化日值；单位与 PCSE 适配显式转换",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "dataset_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "天气版本",
+          "references": "weather_datasets.id"
+        },
+        {
+          "name": "valid_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "有效模型日期"
+        },
+        {
+          "name": "tmin_c",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "最低气温，摄氏度；未补齐可空"
+        },
+        {
+          "name": "tmax_c",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "最高气温，摄氏度；未补齐可空"
+        },
+        {
+          "name": "radiation_mj_m2_day",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "日辐射，MJ/m²/day；进入 PCSE 时转换"
+        },
+        {
+          "name": "rain_mm_day",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "日降水，mm/day"
+        },
+        {
+          "name": "wind_m_s",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "规定高度的风速，m/s"
+        },
+        {
+          "name": "vapour_pressure_kpa",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "水汽压，kPa"
+        },
+        {
+          "name": "et0_mm_day",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "参考蒸散，mm/day；可由规定算法计算"
+        },
+        {
+          "name": "e0_mm_day",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "开放水面蒸发，mm/day"
+        },
+        {
+          "name": "es0_mm_day",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "裸土蒸发，mm/day"
+        },
+        {
+          "name": "quality_code",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "accepted / missing / reconstructed / rejected"
+        },
+        {
+          "name": "quality_details",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "原始值、缺测与处理标志"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "dataset_id",
+          "valid_date"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "非空日降水、辐射、风速与蒸发量不得为负",
+        "tmin_c <= tmax_c（两值非空时）"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "flights",
+      "purpose": "无人机采集批次；覆盖范围可包含多个地块",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "acquired_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "影像采集时间"
+        },
+        {
+          "name": "sensor_code",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "相机型号和标识"
+        },
+        {
+          "name": "footprint",
+          "sql_type": "geometry(MultiPolygon,4326)",
+          "nullable": false,
+          "default": null,
+          "meaning": "采集覆盖范围"
+        },
+        {
+          "name": "input_level",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "calibrated_reflectance / adapted_raw"
+        },
+        {
+          "name": "metadata",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "波段、曝光、校准板、光照、地面控制及定位信息"
+        },
+        {
+          "name": "created_by",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "提交人员",
+          "references": "users.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "GIST(footprint)",
+        "organization_id, acquired_at"
+      ],
+      "checks": [],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "assets",
+      "purpose": "对象存储文件及其生命周期；数据库保存元信息",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "object_key",
+          "sql_type": "text",
+          "nullable": false,
+          "default": null,
+          "meaning": "受控对象键；禁止用户任意指定路径"
+        },
+        {
+          "name": "sha256",
+          "sql_type": "char(64)",
+          "nullable": true,
+          "default": null,
+          "meaning": "服务端确认的文件校验值；上传中可空"
+        },
+        {
+          "name": "byte_size",
+          "sql_type": "bigint",
+          "nullable": true,
+          "default": null,
+          "meaning": "确认的文件字节数；上传中可空"
+        },
+        {
+          "name": "media_type",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际检测的媒体类型"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'uploading'",
+          "meaning": "uploading / validating / ready / rejected / archived"
+        },
+        {
+          "name": "metadata",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "尺寸、CRS、波段、单位、存储版本与来源"
+        },
+        {
+          "name": "available_at",
+          "sql_type": "timestamptz",
+          "nullable": true,
+          "default": null,
+          "meaning": "通过校验并可用的时间"
+        },
+        {
+          "name": "retention_class",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "temporary / source / referenced_result"
+        },
+        {
+          "name": "created_by",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "上传人员或服务主体",
+          "references": "users.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "object_key"
+        ]
+      ],
+      "indexes": [
+        "organization_id, status",
+        "sha256"
+      ],
+      "checks": [
+        "byte_size IS NULL OR byte_size >= 0",
+        "ready 状态必须有校验值、字节数和 available_at"
+      ],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "products",
+      "purpose": "反射率、指数、LAI、掩膜或质量报告等不可变衍生产品",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "flight_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "来源飞行",
+          "references": "flights.id"
+        },
+        {
+          "name": "asset_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "主产品资产",
+          "references": "assets.id"
+        },
+        {
+          "name": "product_kind",
+          "sql_type": "varchar(40)",
+          "nullable": false,
+          "default": null,
+          "meaning": "reflectance / vegetation_index / lai / mask / quality_report"
+        },
+        {
+          "name": "algorithm_version",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "处理代码及模型版本"
+        },
+        {
+          "name": "source_manifest",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "所有输入资产编号、校验值、相机及校准配置"
+        },
+        {
+          "name": "quality_report",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "辐射、配准、掩膜及有效范围检查结果"
+        },
+        {
+          "name": "available_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "产品计算完成且可被使用的时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "flight_id, product_kind",
+        "asset_id"
+      ],
+      "checks": [],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "observations",
+      "purpose": "地块观测与不确定性；原始不合格记录也保留",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "crop_season_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "观测对应的种植季",
+          "references": "crop_seasons.id"
+        },
+        {
+          "name": "product_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "遥感产品；地面观测可空",
+          "references": "products.id"
+        },
+        {
+          "name": "root_record_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "修订链业务根；首版为空",
+          "references": "observations.id"
+        },
+        {
+          "name": "revision",
+          "sql_type": "integer",
+          "nullable": false,
+          "default": "1",
+          "meaning": "观测修订号"
+        },
+        {
+          "name": "observed_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际采集时间"
+        },
+        {
+          "name": "model_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "对齐后的模型日期"
+        },
+        {
+          "name": "available_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "系统可取得该观测的时间"
+        },
+        {
+          "name": "variable",
+          "sql_type": "varchar(40)",
+          "nullable": false,
+          "default": null,
+          "meaning": "green_lai / phenology 等变量"
+        },
+        {
+          "name": "value",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "估计或测量值；无有效数据可空"
+        },
+        {
+          "name": "unit",
+          "sql_type": "varchar(32)",
+          "nullable": false,
+          "default": null,
+          "meaning": "LAI 为 m²/m²；其他变量按 Schema 规定"
+        },
+        {
+          "name": "stddev",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "误差标准差；未知可空，校准时需采用已验证处理规则"
+        },
+        {
+          "name": "valid_fraction",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "有效观测覆盖比例；无空间范围的地面观测可空"
+        },
+        {
+          "name": "support_geometry",
+          "sql_type": "geometry(MultiPolygon,4326)",
+          "nullable": true,
+          "default": null,
+          "meaning": "实际有效空间支撑范围；点位另存 metadata"
+        },
+        {
+          "name": "quality_status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "accepted / pending / rejected / missing"
+        },
+        {
+          "name": "quality_details",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "缺测原因、聚合方式、空间相关性及范围检查"
+        },
+        {
+          "name": "metadata",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "点位、仪器、反演模型及人员来源"
+        },
+        {
+          "name": "source_key",
+          "sql_type": "varchar(160)",
+          "nullable": false,
+          "default": null,
+          "meaning": "组织内的来源去重编码"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "organization_id",
+          "source_key",
+          "revision"
+        ]
+      ],
+      "indexes": [
+        "crop_season_id, model_date, variable",
+        "GIST(support_geometry)",
+        "UNIQUE(COALESCE(root_record_id,id),revision)"
+      ],
+      "checks": [
+        "stddev IS NULL OR stddev > 0",
+        "valid_fraction IS NULL OR valid_fraction BETWEEN 0 AND 1",
+        "accepted 的有效数值与单位须通过变量质量规则"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "jobs",
+      "purpose": "持久化计算任务与幂等、租约、恢复状态",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "job_kind",
+          "sql_type": "varchar(40)",
+          "nullable": false,
+          "default": null,
+          "meaning": "image_processing / simulation / calibration / scenario"
+        },
+        {
+          "name": "crop_season_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "模型任务目标；影像任务可空",
+          "references": "crop_seasons.id"
+        },
+        {
+          "name": "flight_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "影像任务目标；模型任务可空",
+          "references": "flights.id"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'queued'",
+          "meaning": "queued / running / succeeded / failed / cancelled"
+        },
+        {
+          "name": "attempts",
+          "sql_type": "integer",
+          "nullable": false,
+          "default": "0",
+          "meaning": "领取或重试次数"
+        },
+        {
+          "name": "input_revision",
+          "sql_type": "bigint",
+          "nullable": true,
+          "default": null,
+          "meaning": "所冻结的种植季输入修订号；纯影像任务可空"
+        },
+        {
+          "name": "input_manifest",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "冻结的输入清单、查询截止时点及参数条件"
+        },
+        {
+          "name": "idempotency_key",
+          "sql_type": "varchar(160)",
+          "nullable": false,
+          "default": null,
+          "meaning": "重复请求保护键"
+        },
+        {
+          "name": "request_hash",
+          "sql_type": "char(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "规范化请求 SHA-256"
+        },
+        {
+          "name": "lease_owner",
+          "sql_type": "varchar(160)",
+          "nullable": true,
+          "default": null,
+          "meaning": "当前工作进程标识"
+        },
+        {
+          "name": "lease_until",
+          "sql_type": "timestamptz",
+          "nullable": true,
+          "default": null,
+          "meaning": "租约到期时间"
+        },
+        {
+          "name": "heartbeat_at",
+          "sql_type": "timestamptz",
+          "nullable": true,
+          "default": null,
+          "meaning": "工作进程最近心跳"
+        },
+        {
+          "name": "stage",
+          "sql_type": "varchar(64)",
+          "nullable": true,
+          "default": null,
+          "meaning": "面向用户的处理阶段"
+        },
+        {
+          "name": "error_code",
+          "sql_type": "varchar(80)",
+          "nullable": true,
+          "default": null,
+          "meaning": "稳定错误码，避免暴露凭据"
+        },
+        {
+          "name": "error_details",
+          "sql_type": "jsonb",
+          "nullable": true,
+          "default": null,
+          "meaning": "经清理的错误原因与重试信息"
+        },
+        {
+          "name": "finished_at",
+          "sql_type": "timestamptz",
+          "nullable": true,
+          "default": null,
+          "meaning": "终态时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "organization_id",
+          "idempotency_key"
+        ]
+      ],
+      "indexes": [
+        "status, lease_until",
+        "crop_season_id, created_at"
+      ],
+      "checks": [
+        "attempts >= 0",
+        "由 job_kind 决定 crop_season_id 与 flight_id 中恰有一个目标"
+      ],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "outbox_events",
+      "purpose": "与任务同事务保存的待派发事件",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "job_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "要派发的任务",
+          "references": "jobs.id"
+        },
+        {
+          "name": "event_kind",
+          "sql_type": "varchar(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "任务派发事件类型"
+        },
+        {
+          "name": "payload",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "最小消息，仅含任务编号和契约版本"
+        },
+        {
+          "name": "status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": "'pending'",
+          "meaning": "pending / sent"
+        },
+        {
+          "name": "attempts",
+          "sql_type": "integer",
+          "nullable": false,
+          "default": "0",
+          "meaning": "派发尝试次数"
+        },
+        {
+          "name": "next_attempt_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "下次派发时刻"
+        },
+        {
+          "name": "sent_at",
+          "sql_type": "timestamptz",
+          "nullable": true,
+          "default": null,
+          "meaning": "最近成功派发时间"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "job_id",
+          "event_kind"
+        ]
+      ],
+      "indexes": [
+        "status, next_attempt_at"
+      ],
+      "checks": [],
+      "lifecycle": "可修改，业务变更需审计"
+    },
+    {
+      "name": "simulation_runs",
+      "purpose": "已提交的完整模型结果、诊断和输入快照",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "job_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "产出本结果的计算任务",
+          "references": "jobs.id"
+        },
+        {
+          "name": "crop_season_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "对应种植季",
+          "references": "crop_seasons.id"
+        },
+        {
+          "name": "run_kind",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "simulation / calibration / scenario"
+        },
+        {
+          "name": "input_revision",
+          "sql_type": "bigint",
+          "nullable": false,
+          "default": null,
+          "meaning": "运行使用的输入修订号"
+        },
+        {
+          "name": "input_hash",
+          "sql_type": "char(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "完整规范化输入与引用校验值的 SHA-256"
+        },
+        {
+          "name": "software_version",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "代码提交及构建版本"
+        },
+        {
+          "name": "pcse_version",
+          "sql_type": "varchar(48)",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际 PCSE 依赖版本"
+        },
+        {
+          "name": "model_config",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际模型类、配置与有效变量能力"
+        },
+        {
+          "name": "input_manifest",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "参数、天气、农事、观测、边界及时间范围的准确版本"
+        },
+        {
+          "name": "snapshot_asset_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "规范化运行输入快照资产",
+          "references": "assets.id"
+        },
+        {
+          "name": "start_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际模拟开始日期"
+        },
+        {
+          "name": "end_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "实际模拟结束日期"
+        },
+        {
+          "name": "as_of_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": null,
+          "meaning": "允许使用信息的截止时点"
+        },
+        {
+          "name": "calibration_status",
+          "sql_type": "varchar(24)",
+          "nullable": false,
+          "default": null,
+          "meaning": "not_requested / succeeded / skipped / failed"
+        },
+        {
+          "name": "diagnostics",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "求解状态、预算、目标函数、质量提示和随机种子"
+        },
+        {
+          "name": "parent_run_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "情景对比或校正的父运行；可空",
+          "references": "simulation_runs.id"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "job_id"
+        ]
+      ],
+      "indexes": [
+        "crop_season_id, created_at",
+        "input_hash"
+      ],
+      "checks": [
+        "end_date >= start_date"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "run_inputs",
+      "purpose": "运行输入版本清单；泛型引用与快照共同保障追溯",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "run_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "运行编号",
+          "references": "simulation_runs.id"
+        },
+        {
+          "name": "role",
+          "sql_type": "varchar(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "crop / soil / weather / management / observation / boundary 等输入角色"
+        },
+        {
+          "name": "entity_type",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "受白名单约束的输入表或配置类型"
+        },
+        {
+          "name": "entity_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "准确记录编号；由应用按 entity_type 校验，不能声明为单一物理外键"
+        },
+        {
+          "name": "entity_version",
+          "sql_type": "varchar(120)",
+          "nullable": false,
+          "default": null,
+          "meaning": "准确版本或修订号"
+        },
+        {
+          "name": "content_hash",
+          "sql_type": "char(64)",
+          "nullable": false,
+          "default": null,
+          "meaning": "所引用输入内容的校验值"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "run_id",
+          "role",
+          "entity_type",
+          "entity_id",
+          "entity_version"
+        ]
+      ],
+      "indexes": [
+        "entity_type, entity_id"
+      ],
+      "checks": [],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "daily_states",
+      "purpose": "每次完整运行的逐日输出；仅保存模型明确提供的变量",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "run_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "运行编号",
+          "references": "simulation_runs.id"
+        },
+        {
+          "name": "model_date",
+          "sql_type": "date",
+          "nullable": false,
+          "default": null,
+          "meaning": "模型输出实际对应的日期"
+        },
+        {
+          "name": "lai",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "绿叶面积指数，m²/m²；未提供可空"
+        },
+        {
+          "name": "dvs",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "发育阶段 DVS；未提供可空"
+        },
+        {
+          "name": "biomass",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "指定模型的地上干物质 TAGP，kg/ha；不等同于籽粒产量"
+        },
+        {
+          "name": "soil_moisture",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "对应模型层的体积含水率，cm³/cm³；未提供可空"
+        },
+        {
+          "name": "storage_organ_mass",
+          "sql_type": "double precision",
+          "nullable": true,
+          "default": null,
+          "meaning": "模型提供的贮藏器官干物质 TWSO，kg/ha；需作物适用性验证"
+        },
+        {
+          "name": "uncertainty",
+          "sql_type": "jsonb",
+          "nullable": true,
+          "default": null,
+          "meaning": "有验证依据时的区间及其计算方法；未计算可空"
+        },
+        {
+          "name": "extra_variables",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "其他已定义变量，含单位和模型能力标识"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [
+        [
+          "run_id",
+          "model_date"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "已提供的 LAI 与干物质输出应符合对应模型有效域"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    },
+    {
+      "name": "current_runs",
+      "purpose": "种植季当前完整结果指针；使用输入修订号条件更新",
+      "columns": [
+        {
+          "name": "crop_season_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "每季最多一条指针",
+          "references": "crop_seasons.id"
+        },
+        {
+          "name": "run_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "完整且可发布的实际季运行",
+          "references": "simulation_runs.id"
+        },
+        {
+          "name": "input_revision",
+          "sql_type": "bigint",
+          "nullable": false,
+          "default": null,
+          "meaning": "发布时比较的输入修订号"
+        },
+        {
+          "name": "updated_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "指针更新时间"
+        }
+      ],
+      "primary_key": [
+        "crop_season_id"
+      ],
+      "unique_constraints": [
+        [
+          "run_id"
+        ]
+      ],
+      "indexes": [],
+      "checks": [
+        "运行与种植季、组织、输入修订号一致",
+        "情景运行不能写入实际季当前指针"
+      ],
+      "lifecycle": "指针可条件更新；旧运行不可被覆盖"
+    },
+    {
+      "name": "audit_events",
+      "purpose": "追加审计，记录授权访问和业务变更",
+      "columns": [
+        {
+          "name": "id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": "gen_random_uuid()",
+          "meaning": "记录主键"
+        },
+        {
+          "name": "organization_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "所属组织；授权时仍须检查访问主体",
+          "references": "organizations.id"
+        },
+        {
+          "name": "actor_id",
+          "sql_type": "uuid",
+          "nullable": true,
+          "default": null,
+          "meaning": "操作用户；后台服务操作可空",
+          "references": "users.id"
+        },
+        {
+          "name": "service_actor",
+          "sql_type": "varchar(120)",
+          "nullable": true,
+          "default": null,
+          "meaning": "后台服务标识；用户操作可空"
+        },
+        {
+          "name": "action",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "审计动作"
+        },
+        {
+          "name": "entity_type",
+          "sql_type": "varchar(80)",
+          "nullable": false,
+          "default": null,
+          "meaning": "受影响实体类型"
+        },
+        {
+          "name": "entity_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "受影响记录编号；泛型引用由服务检查"
+        },
+        {
+          "name": "request_id",
+          "sql_type": "uuid",
+          "nullable": false,
+          "default": null,
+          "meaning": "贯穿接口与计算的请求编号"
+        },
+        {
+          "name": "details",
+          "sql_type": "jsonb",
+          "nullable": false,
+          "default": null,
+          "meaning": "变更理由、修订编号和结果，不保存密码、令牌或原始密钥"
+        },
+        {
+          "name": "created_at",
+          "sql_type": "timestamptz",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "meaning": "记录创建时间"
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique_constraints": [],
+      "indexes": [
+        "organization_id, created_at",
+        "entity_type, entity_id",
+        "request_id"
+      ],
+      "checks": [
+        "用户或服务主体至少存在一项"
+      ],
+      "lifecycle": "正式记录及版本不可原位覆盖"
+    }
+  ]
+}

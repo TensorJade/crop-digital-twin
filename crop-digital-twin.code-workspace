@@ -1,0 +1,15 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.analysis.extraPaths": ["backend/src", "packages/crop_engine/src"],
+    "editor.formatOnSave": true,
+    "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" },
+    "[vue]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+    "files.exclude": { "**/__pycache__": true, "**/.pytest_cache": true }
+  },
+  "extensions": {
+    "recommendations": ["ms-python.python", "charliermarsh.ruff", "Vue.volar", "dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+  }
+}
