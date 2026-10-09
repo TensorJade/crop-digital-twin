@@ -45,7 +45,11 @@ PCSE私有子进程仍以真实黑盒和浏览器执行验证，不合并到父p
 
 ## Git、CI与收尾
 
-实现和日志按既有授权推送功能分支；提交号、远程检查和最后工作区状态在检查完成后追加。远程无release目标分支、无指定人工审查者；自查/工具验证不称正式人工审核。未公开部署，M7生产保护不变。
+实现与工程文档提交5ce2e6cb4669496fd2c0ca8a3159d7259460e6cb已按用户授权推送origin/codex/feature_weather_20261009，初次推送成功并建立跟踪分支。[CI运行37874015923](https://github.com/TensorJade/crop-digital-twin/actions/runs/37874015923)核对headSha一致，整体与python/frontend均completed/success。
+
+实际远程日志：PostgreSQL17/SQLite共248项全部通过、无跳过（89.17s），合并行覆盖率95.48%；前端24项单元、14条Chromium流程通过（35.1s）。Ruff check/format、Linux/Windows mypy69文件、Vite构建、OpenAPI一致与34項工作区检查通过。CI使用独立PostgreSQL服务、临时schema/SQLite及合成天气，无生产数据/公网天气依赖。本机83项PG跳过由该次CI补验，不改写本地记录为通过。
+
+远程默认仍scaffold，需选择weather功能分支查看最新实现。CI取证后更新本日志/progress并另行文档提交、按既有授权推送；最终提交和远程HEAD可查Git记录。远程无release目标分支、无指定人工审查者；自查/工具验证不称正式人工审核。未公开部署，M7生产保护不变。
 
 ## 后续范围
 
