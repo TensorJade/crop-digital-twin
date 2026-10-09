@@ -18,4 +18,6 @@ npm run test:e2e
 
 Playwright 自动启动 8019 API、5179 Vite 、实际独立worker和已迁移临时SQLite；仅该临时库建立测试账号。Windows 可运行根目录 scripts/check-e2e.ps1 -BrowserChannel msedge。单元与浏览器测试分别发现文件。验收说明见 tests/e2e/README.md（仓库根目录）。
 
-Vite 代理供联调，dist 的 API 请求需正式代理。输入/快照和真实潜在生长已实现，自动天气/地图及移栽/水田管理尚待实施，生产部署需后续验收。
+M3.3增加WeatherSourcePanel.vue/weatherApi.ts：按当前地块位置获取NASA历史网格天气，预览/重试/CSV下载/保存；附近NOAA目录候选与观测状态单独展示，A/B供来源提供者填写。GET只获取候选，保存仍走已有CSRF接口；日期变更/卸载丢弃过期响应。
+
+Vite代理供联调，dist的API请求需正式代理。输入/快照、潜在生长和历史网格获取已实现，授权站点观测/地图及移栽/水田管理尚待实施，生产部署需后续验收。

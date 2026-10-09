@@ -209,7 +209,7 @@ wheels = [
 
 [[package]]
 name = "crop-digital-twin-workspace"
-version = "0.5.0"
+version = "0.6.0"
 source = { virtual = "." }
 dependencies = [
     { name = "crop-twin-api" },
@@ -246,7 +246,7 @@ dev = [
 
 [[package]]
 name = "crop-twin-api"
-version = "0.5.0"
+version = "0.6.0"
 source = { editable = "backend" }
 dependencies = [
     { name = "alembic" },
@@ -275,7 +275,7 @@ requires-dist = [
 
 [[package]]
 name = "crop-twin-engine"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "packages/crop_engine" }
 dependencies = [
     { name = "pcse" },

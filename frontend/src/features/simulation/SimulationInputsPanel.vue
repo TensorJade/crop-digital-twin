@@ -4,6 +4,7 @@ import type { Page } from '../../api/types'
 import PageNavigation from '../../components/PageNavigation.vue'
 import type { Plot, Season } from '../farm/types'
 import InputAssetForm from './InputAssetForm.vue'
+import WeatherSourcePanel from './WeatherSourcePanel.vue'
 import { checkInputs, getSnapshot, listAssets, listSnapshots, saveSnapshot } from './api'
 import { downloadData } from './files'
 import { assetLabels, selectionLabels } from './types'
@@ -19,6 +20,7 @@ const assets = ref<Record<AssetKind, Page<InputAsset> | null>>({
 const selected = ref<Record<AssetKind, string>>({ soil: '', crop: '', weather: '' })
 const snapshots = ref<Page<InputSnapshot> | null>(null)
 const addingKind = ref<AssetKind | null>(null)
+const isFetchingWeather = ref(false)
 const emergenceDate = ref('')
 const cutoffDate = ref('')
 const report = ref<InputReport | null>(null)
@@ -101,9 +103,20 @@ async function snapshotPage(offset: number) {
 
 async function assetCreated(asset: InputAsset) {
   addingKind.value = null
+  isFetchingWeather.value = false
   await reload()
   selected.value[asset.kind] = asset.id
   notice.value = '资料已保存，旧版本仍可选择。'
+}
+
+function toggleAsset(kind: AssetKind) {
+  addingKind.value = addingKind.value === kind ? null : kind
+  isFetchingWeather.value = false
+}
+
+function toggleWeather() {
+  isFetchingWeather.value = !isFetchingWeather.value
+  addingKind.value = null
 }
 
 function selection(): SnapshotSelection {
@@ -219,12 +232,28 @@ onMounted(() => void reload())
           type="button"
           class="text-button"
           :disabled="isLoading || isWorking"
-          @click="addingKind = addingKind === kind ? null : kind"
+          @click="toggleAsset(kind)"
         >
           {{ kind === 'soil' ? '登记土壤' : kind === 'crop' ? '导入品种' : '导入天气' }}
         </button>
       </div>
     </div>
+    <button
+      v-if="canManage"
+      type="button"
+      class="secondary-button"
+      :disabled="isLoading || isWorking"
+      @click="toggleWeather"
+    >
+      按农田位置获取天气
+    </button>
+    <WeatherSourcePanel
+      v-if="canManage && isFetchingWeather"
+      :plot="plot"
+      :season="season"
+      @created="assetCreated"
+      @cancel="isFetchingWeather = false"
+    />
     <InputAssetForm
       v-if="canManage && addingKind"
       :key="addingKind"

@@ -14,11 +14,15 @@ flowchart LR
   P --> W
   W --> DB
   DB --> API
+  API --> WEATHER[天气适配：短SQL校验后联网]
+  WEATHER --> POWER[NASA POWER历史小时网格]
+  WEATHER --> NOAA[NOAA历史站点目录]
+  WEATHER --> API
 ~~~
 
-已实现 M1/M2/M3.1 与 M3.2 潜在计算：输入封存 → SQL 排队 → 独立 worker → 真实 Wofost72_PP → 版本化逐日结果 → 曲线/日期/导出。API 不导入 PCSE 或执行重计算，算法不读 HTTP 或应用数据库。天气提供器来自离线导入，自动站点/联网天气、授权卫星底图/空间扩展、影像对象存储和遥感校准仍待实施。初始目标图保存在 docs/diagrams，与当前实现分别维护。
+已实现M1/M2/M3.1/M3.2及M3.3历史网格天气/站点目录：天气预览并保存原始响应 → 输入封存 → SQL排队 → 独立worker → 真实Wofost72_PP → 版本化日值/曲线/导出。API不导入PCSE，算法不读HTTP或应用数据库。天气只在明确请求时获取，短SQL授权事务在上游HTTP之前结束；目录进程内缓存24小时，无Redis。授权站点观测、当天更新/预测、卫星底图/空间扩展、影像对象存储和遥感校准仍待实施。初始目标图保存在docs/diagrams，与当前实现分别维护。
 
-实际数据流见 [农田](modules/farm-management.md)、[账户](modules/identity.md)、[输入](modules/simulation-inputs.md)和 [计算](modules/potential-simulation.md)。前端各功能集中组件、类型和 API；后端接口负责校验/授权，用例负责事务与幂等，领域无框架依赖，存储适配负责组织范围 SQL，共用 HTTP/分页不反向依赖业务。
+实际数据流见 [农田](modules/farm-management.md)、[账户](modules/identity.md)、[输入](modules/simulation-inputs.md)、[计算](modules/potential-simulation.md)和[天气](modules/weather-sources.md)。前端各功能集中组件、类型和API；后端接口负责校验/授权，用例负责事务与幂等，领域无框架依赖，存储适配负责组织范围SQL，共用HTTP/分页不反向依赖业务。
 
 账户使用 Argon2id、可撤销 SQL 会话、HttpOnly Cookie 和内存 CSRF，无 JWT/Redis。组织内共享地块，跨组织资源返回404。写操作与审计同事务；停用/改密码撤销会话。旧地块接收须显式初始化，不自动归属首次登录者。见 [ADR0003](adr/0003-identity.md)。
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from crop_twin.api.v1.schemas import OutputModel
 from crop_twin.domain.simulation.models import AssetKind
+from crop_twin.infrastructure.weather.power import validate_power_provenance
 
 Finite = Annotated[float, Field(strict=True, allow_inf_nan=False)]
 
@@ -60,6 +61,20 @@ class CropData(InputModel):
         return self
 
 
+class PowerProvenance(InputModel):
+    """Sealed provider data and declared request; no URLs or executable configuration."""
+
+    code: Literal["nasa_power_hourly"]
+    adapter_version: Literal["1.0.0"]
+    start_date: date
+    end_date: date
+    requested_latitude: Finite = Field(ge=-90, le=90)
+    requested_longitude: Finite = Field(ge=-180, le=180)
+    retrieved_at: datetime
+    raw_response: dict[str, Any]
+    raw_hash: str = Field(pattern="^[a-f0-9]{64}$")
+
+
 class WeatherData(InputModel):
     """CSV unit metadata differentiates a real station from a gridded product."""
 
@@ -72,6 +87,7 @@ class WeatherData(InputModel):
     time_basis: Literal["Asia/Shanghai", "UTC", "LST"]
     angstrom_a: Finite | None = Field(default=None, ge=0.1, le=0.4)
     angstrom_b: Finite | None = Field(default=None, ge=0.3, le=0.7)
+    provider: PowerProvenance | None = None
     csv_text: Annotated[str, StringConstraints(strip_whitespace=False)] = Field(
         min_length=1, max_length=262144
     )
@@ -88,6 +104,10 @@ class WeatherData(InputModel):
         if self.angstrom_a is not None and self.angstrom_b is not None:
             if not 0.6 <= self.angstrom_a + self.angstrom_b <= 0.9:
                 raise ValueError("蒸散计算系数 A+B 应位于 0.6–0.9")
+        try:
+            validate_power_provenance(self.model_dump(mode="json"))
+        except InputDataError as error:
+            raise ValueError(str(error)) from None
         return self
 
 

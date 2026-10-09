@@ -19,7 +19,7 @@ from crop_engine.inputs import (
 
 PCSE_VERSION = "6.0.13"
 MODEL_CODE = "WOFOST72_PP"
-ADAPTER_VERSION = "1.0.0"
+ADAPTER_VERSION = "1.0.1"
 ASSUMPTIONS = [
     "潜在生长：假设水肥充足，未计算灌溉、施肥、病虫害和水田淹水的影响。",
     "只计算已发生天气覆盖的日期；不是未来天气预测或产量承诺。",

@@ -13,6 +13,8 @@ from crop_twin.core.settings import Settings
 from crop_twin.infrastructure.database.identity_repository import SqlIdentityRepository
 from crop_twin.infrastructure.database.session import build_engine
 from crop_twin.infrastructure.passwords import Argon2Passwords
+from crop_twin.main import create_app
+from e2e_weather import FixtureWeatherSources
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
@@ -56,7 +58,12 @@ def main() -> None:
         creationflags=creation_flags,
     )
     try:
-        uvicorn.run("crop_twin.main:app", host="127.0.0.1", port=8019, proxy_headers=False)
+        uvicorn.run(
+            create_app(settings, weather_sources=FixtureWeatherSources()),
+            host="127.0.0.1",
+            port=8019,
+            proxy_headers=False,
+        )
     finally:
         worker.terminate()
         try:

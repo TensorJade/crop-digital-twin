@@ -35,6 +35,10 @@ REQUIRED = [
     "docs/modules/potential-simulation.md",
     "scripts/simulation_worker.py",
     "tests/fixtures/potential-input.json",
+    "backend/src/crop_twin/infrastructure/weather/sources.py",
+    "frontend/src/features/simulation/WeatherSourcePanel.vue",
+    "docs/modules/weather-sources.md",
+    "docs/adr/0006-weather-sources.md",
 ]
 
 
@@ -57,6 +61,8 @@ def main() -> None:
         "/api/v1/simulation-inputs/check",
         "/api/v1/simulation-inputs",
         "/api/v1/simulation-runs",
+        "/api/v1/weather/preview",
+        "/api/v1/weather/stations",
     }
     if not required_routes <= schema["paths"].keys():
         raise SystemExit("An implemented module route is missing.")

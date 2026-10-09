@@ -771,6 +771,7 @@ textarea {
   color: var(--ink);
 }
 .simulation-input-panel {
+  min-width: 0;
   padding: 26px;
   background: #fff;
   border: 1px solid var(--line);
@@ -1032,5 +1033,60 @@ textarea {
   }
   .season-tabs button {
     padding-inline: 10px;
+  }
+}
+.weather-source-panel {
+  min-width: 0;
+  margin-block: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7fbf9;
+}
+.weather-source-panel .entry-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+.weather-source-panel .field-pair > label {
+  min-width: 0;
+}
+.weather-source-panel .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.weather-preview,
+.weather-stations {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.weather-preview > strong {
+  display: block;
+  margin-bottom: 0.6rem;
+}
+.weather-preview details {
+  margin-block: 1rem;
+}
+.weather-station-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.weather-station-row small {
+  display: block;
+  color: #6e8178;
+  margin-top: 0.4rem;
+}
+@media (max-width: 600px) {
+  .weather-source-panel,
+  .weather-source-panel .entry-form {
+    padding: 12px;
+  }
+  .weather-station-row {
+    overflow-wrap: anywhere;
   }
 }

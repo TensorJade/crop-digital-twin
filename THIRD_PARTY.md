@@ -13,3 +13,13 @@ PCSE 可执行边界仅为固定 Wofost72_PP，调用 ParameterProvider、Weathe
 数值测试资料是本项目自行构造的合成参数/天气，仅验证软件接口。没有复制官方水稻品种参数为产品默认值，没有包含受限制气象站、卫星底图、原始影像或训练权重。来源/使用许可仍由每份输入资料明确记录；真实农艺参数与数据授权需在试点确认。
 
 其他基础组件包括 FastAPI/SQLAlchemy/Alembic/Psycopg/argon2-cffi、Vue/Vite/TypeScript、Playwright；本轮新增科学包的传递依赖也在 uv.lock 锁定。后续发布须按各实际发行包整理完整清单。
+
+## M3.3 外部数据与公式
+
+| 来源 | 用途与版本记录 | 官方使用信息 |
+|---|---|---|
+| NASA POWER Hourly/Point（AG、UTC） | 地块历史网格；实际响应header/API版本、请求/获取时间和原始JSON/hash随资料封存，转换适配1.0.0 | [小时API](https://power.larc.nasa.gov/docs/services/api/temporal/hourly/)、[数据/单位/延迟](https://power.larc.nasa.gov/docs/faqs/data/)、[NASA公开数据许可政策](https://science.data.nasa.gov/about/license)；保留POWER及实际数据来源，按适用政策/访问条款使用，不把第三方客户端的软件许可当成天气数据许可 |
+| NOAA NCEI ISD历史站点目录 | 200km内候选位置/距离/历史覆盖；目录原始字节SHA-256/获取时间，内存缓存24h | [ISD说明](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database)、[实际目录](https://www.ncei.noaa.gov/pub/data/noaa/isd-history.csv)、[NOAA数据使用说明](https://www.noaa.gov/office-education/outreach-communication/faq)；保留来源，不声称取得CMA授权或站点实时观测 |
+| FAO56气象公式 | 由小时露点计算蒸汽压后平均，公式重新实现 | [官方章节](https://www.fao.org/4/x0490e/x0490e07.htm)，采用公式并注明出处，未复制全文或图表 |
+
+本轮使用Python标准库urllib，不增加第三方天气SDK。实际外部响应只在忽略runtime/做烟雾验证，不进入Git；提交的小时/目录fixture均为项目自行构造的合成测试资料。POWER为历史网格、存在数日延迟，派生日值和网格海拔不等于农田实测。具体试点授权站点、公开地图许可和生产分发义务继续在相应模块/M7核对。

@@ -16,6 +16,7 @@ from crop_twin.api.v1.health import router as health_router
 from crop_twin.api.v1.identity import router as identity_router
 from crop_twin.api.v1.inputs import router as inputs_router
 from crop_twin.api.v1.runs import router as runs_router
+from crop_twin.api.v1.weather import router as weather_router
 from crop_twin.core.settings import Settings
 from crop_twin.domain.farm.rules import FarmConflict, FarmError, FarmNotFound
 from crop_twin.domain.identity.rules import (
@@ -26,11 +27,15 @@ from crop_twin.domain.identity.rules import (
     LoginLimited,
     Unauthorized,
 )
+from crop_twin.domain.simulation.weather import WeatherUnavailable
 from crop_twin.infrastructure.database.session import build_engine
 from crop_twin.infrastructure.passwords import Argon2Passwords
+from crop_twin.infrastructure.weather.sources import WeatherSources
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, *, weather_sources: WeatherSources | None = None
+) -> FastAPI:
     """Create the authenticated development API; production awaits the release gate."""
     configuration = settings or Settings()
     if configuration.environment == "production":
@@ -56,11 +61,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.settings = configuration
+    application.state.weather_sources = weather_sources or WeatherSources()
     application.include_router(health_router)
     application.include_router(farm_router)
     application.include_router(identity_router)
     application.include_router(inputs_router)
     application.include_router(runs_router)
+    application.include_router(weather_router)
 
     @application.middleware("http")
     async def private_responses(
@@ -107,6 +114,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         status = (
             404
             if isinstance(error, FarmNotFound)
+            else 503
+            if isinstance(error, WeatherUnavailable)
             else 409
             if isinstance(error, FarmConflict)
             else 400

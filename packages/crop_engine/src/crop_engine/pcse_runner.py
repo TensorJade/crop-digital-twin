@@ -58,7 +58,9 @@ def calculate(payload: dict[str, Any]) -> dict[str, Any]:
         source["longitude"],
         source["elevation_m"],
     )
-    weather.description = ["Frozen user-supplied observed weather; no external provider."]
+    weather.description = [
+        "Frozen historical station/grid weather; no downloads during simulation."
+    ]
     reference_weather = []
     for day in source["days"]:
         measured = date.fromisoformat(day["date"])
@@ -130,11 +132,18 @@ def calculate(payload: dict[str, Any]) -> dict[str, Any]:
         "simulation_executed": True,
         "agronomically_validated": False,
         "management_effects_applied": False,
-        "assumptions": ASSUMPTIONS,
+        "assumptions": ASSUMPTIONS
+        + (
+            ["天气来自历史网格资料，不能作为该地块气象站实测或当地精度证据。"]
+            if source["source_kind"] == "gridded"
+            else []
+        ),
         "requested_period": payload["period"],
         "last_crop_date": daily[-1]["date"],
         "daily": daily,
         "weather_method": {
+            "source_kind": source["source_kind"],
+            "raw_hash": (source.get("provider") or {}).get("raw_hash"),
             "reference_et": "PCSE reference_ET / PM",
             "angstrom_a": source["angstrom_a"],
             "angstrom_b": source["angstrom_b"],

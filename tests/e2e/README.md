@@ -1,8 +1,8 @@
 # 端到端验收
 
-浏览器测试位于 frontend/tests/e2e/{farm,identity,simulation,growth}.spec.ts。Playwright 自动启动前端、真实API、独立计算worker与已迁移临时数据库；Windows 入口 scripts/check-e2e.ps1，CI 使用 Chromium。
+浏览器测试位于frontend/tests/e2e/{farm,identity,simulation,growth,weather}.spec.ts。Playwright自动启动前端、真实API、独立计算worker与已迁移临时数据库；Windows入口scripts/check-e2e.ps1，CI使用Chromium。
 
-当前十三条流程：
+当前十四条流程：
 - 登录后地块/种植季 → 灌溉 → 单位换算 → 修正/历史 → 刷新 → 结束 → 下一季。
 - 地块与种植季读取故障重试。
 - 切换地块时旧请求延迟返回不覆盖当前种植季。
@@ -20,3 +20,5 @@
 输出在忽略的 test-results/、runtime/。真实潜在计算已验收；水田精度与遥感链路后续独立验收；当前不提供科学精度、生产性能或完整发布安全结论。
 
 新增生长流程：合成资料封存→页面确认并排队→真实worker/PCSE15日结果→日期/指标曲线→实际下载/Python校验→刷新历史；桌面/390px手机截图与无溢出检查。另一条验证只读成员可查看和下载结果、无计算入口。启动器只对已验证test临时数据库启动worker，并在结束时回收自己的进程。
+
+新增天气流程：先503再重试→实际API/转换预览→候选站点且无观测→CSV数值校验→桌面/390px手机→保存原始来源→输入快照→真实worker/PCSE2日结果及weather_method来源/hash。仅该隔离启动器注入自有合成小时/目录响应，页面明确标记；自动测试不访问NASA/NOAA，真实公网另做显式烟雾验证。

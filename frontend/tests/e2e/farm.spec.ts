@@ -17,6 +17,7 @@ test.afterEach(async ({ page }) => {
 })
 
 async function registerPlot(page: Page, plotName: string) {
+  await expect(page.getByText('正在读取地块…', { exact: true })).toHaveCount(0)
   const openForm = page.getByRole('button', { name: '登记地块', exact: true })
   if (await openForm.isVisible()) await openForm.click()
   await page.getByLabel('地块名称', { exact: true }).fill(plotName)

@@ -32,3 +32,9 @@ simulation_runs：UUID id、organization_id、season_id、input_id、request_key
 组织/request_key唯一，组织/季节/时间/ID分页及状态/租约/时间索引；status限queued/running/succeeded/failed、attempts为0–3，running必须有且仅有租约字段，成功必须有结果/哈希且无错误码。所有关系是应用维护逻辑外键；私有租约字段不出API。结果最多512KiB，摘要列表不返回逐日结果。
 
 任务状态为运营事实可更新，完成结果无修改/删除接口。新UUID表示新计算版本，引用不可变输入ID/哈希；结果规范JSON哈希规则同输入。结果包含实际模型/PCSE/适配/软件版本、日值、天气、条件和标记，不修改旧输入报告。
+
+## M3.3 天气来源字段（无迁移）
+
+weather.payload新增可空provider：code固定nasa_power_hourly，adapter_version固定1.0.0，start_date/end_date ISO日期，requested_latitude/longitude有限数值，retrieved_at获取UTC时间，raw_response解析的原始小时JSON，raw_hash 64字符规范JSON SHA-256。没有默认气象值；旧资料/快照不改写。保存时核对日值、单位/日界、坐标/海拔与原始响应派生结果，再沿用资料/快照体积限制与同事务审计。
+
+完整原始响应保留所有字段，不保留HTTP空白/键顺序；哈希仅证明内容一致，不能认证NASA身份。资料、输入封存来源；新PCSE结果weather_method增加source_kind与raw_hash引用。source_kind=gridded时station_id=null，不能把NOAA候选站点绑定为NASA来源。目录缓存24小时在内存，可丢弃；不新增业务表，迁移仍0004、11表。字段与方法见[天气模块](modules/weather-sources.md)。
