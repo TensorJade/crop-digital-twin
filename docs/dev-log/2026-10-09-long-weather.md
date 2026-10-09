@@ -29,4 +29,6 @@
 
 ## 提交
 
-提交编号和 CI 结果在本次功能分支提交后补充。
+提交：`60c4d83b6d8850071b5e1cb73342efb63eac0c35`，标题为 `feat(weather): 支持长季天气分段获取`。
+
+[GitHub Actions 37907211952](https://github.com/TensorJade/crop-digital-twin/actions/runs/37907211952) 的 Python 和 frontend 任务均通过。CI 使用 PostgreSQL 17、SQLite 和 Chromium；提交时远程分支为 `codex/feature_long_weather_20261009`。
