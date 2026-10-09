@@ -19,5 +19,7 @@
 | 2026-10-09 | [87e5627](https://github.com/TensorJade/crop-digital-twin/commit/87e56276978b1dd7abadc0c49264e06d53ac9f87) | 天气获取 | 补充天气接口和浏览器测试记录 |
 | 2026-10-09 | [37c8b9d](https://github.com/TensorJade/crop-digital-twin/commit/37c8b9da371403ad3827f7920b992cc7375dffa0) | 文档整理 | 整理开发文档和提交记录 |
 | 2026-10-09 | [60c4d83](https://github.com/TensorJade/crop-digital-twin/commit/60c4d83b6d8850071b5e1cb73342efb63eac0c35) | 天气获取 | 支持长季天气分段获取 |
+| 2026-10-09 | [055a67e](https://github.com/TensorJade/crop-digital-twin/commit/055a67e525b2693634f04a77f4c5e575d41f570b) | 天气文档 | 补充分段获取记录 |
+| 2026-10-09 | [dcf2c22](https://github.com/TensorJade/crop-digital-twin/commit/dcf2c224961abc9d8a94f188a67e29531c6730a1) | 开发文档 | 更新当前开发分支说明 |
 
 文档整理记录见 [2026-10-09 日志](2026-10-09-docs-editing.md)，后续编号可从本文件的 Git 历史查看。
