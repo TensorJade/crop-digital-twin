@@ -122,7 +122,9 @@ function download() {
           >天气结束日期<input v-model="end" type="date" required :disabled="isFetching || isSaving"
         /></label>
       </div>
-      <p class="muted">选择已结束的日期，每次最多120天；近期资料通常延迟数日，缺测会提示。</p>
+      <p class="muted">
+        选择已结束的日期，最多366天；系统会按不超过120天的区间分段获取，近期资料通常延迟数日。
+      </p>
       <div class="form-actions">
         <button class="primary-button" :disabled="!start || !end || isFetching || isSaving">
           {{ isFetching ? '正在获取天气…' : '获取并预览天气' }}

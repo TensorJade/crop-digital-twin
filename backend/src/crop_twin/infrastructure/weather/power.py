@@ -10,16 +10,79 @@ from crop_engine.inputs import InputDataError, canonical_json, content_hash, par
 
 POWER_PARAMETERS = ("T2M", "T2MDEW", "WS2M", "PRECTOTCORR", "ALLSKY_SFC_SW_DWN")
 POWER_LIMIT = 393216
+SEGMENT_MAX_DAYS = 120
+MAX_WEATHER_DAYS = 366
 ADAPTER_VERSION = "1.0.0"
 POWER_LICENSE = "NASA公开科学数据；保留POWER来源，按NASA数据许可政策和访问条款使用"
 POWER_SOURCE = "NASA POWER / MERRA-2与卫星辐射历史网格天气"
 
 
-def check_period(start: date, end: date) -> None:
-    """Allow 1–120 complete past Beijing days; do not synthesize today's weather."""
+def check_period(start: date, end: date, *, max_days: int = SEGMENT_MAX_DAYS) -> None:
+    """Check a complete past period; provider requests are split at 120 days."""
     today = (datetime.now(UTC) + timedelta(hours=8)).date()
-    if start < date(2001, 1, 2) or not start <= end < today or (end - start).days >= 120:
-        raise InputDataError("日期应为2001-01-02起、已结束的1–120天")
+    if start < date(2001, 1, 2) or not start <= end < today or (end - start).days >= max_days:
+        raise InputDataError(f"日期应为2001-01-02起、已结束的1–{max_days}天")
+
+
+def weather_days_csv(days: list[dict[str, Any]]) -> str:
+    """Serialize normalized days once after joining provider segments."""
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, lineterminator="\n")
+    writer.writerow(
+        ("date", "tmin_c", "tmax_c", "rain_mm", "radiation_mj_m2", "wind_m_s", "vapor_kpa")
+    )
+    for day in days:
+        writer.writerow(
+            (
+                day["date"],
+                day["tmin_c"],
+                day["tmax_c"],
+                day["rain_mm"],
+                day["radiation_mj_m2"],
+                day["wind_m_s"],
+                day["vapor_kpa"],
+            )
+        )
+    return buffer.getvalue()
+
+
+def aggregate_segments(
+    segments: list[tuple[date, date, dict[str, Any]]], start: date, end: date
+) -> dict[str, Any]:
+    """Join contiguous provider responses while checking each response independently."""
+    check_period(start, end, max_days=MAX_WEATHER_DAYS)
+    if not segments or segments[0][0] != start or segments[-1][1] != end:
+        raise InputDataError("天气分段未覆盖请求日期")
+    combined: dict[str, Any] | None = None
+    all_days: list[dict[str, Any]] = []
+    expected_start = start
+    for segment_start, segment_end, raw in segments:
+        if segment_start != expected_start:
+            raise InputDataError("天气分段之间存在日期缺口或重叠")
+        part = aggregate_power(raw, segment_start, segment_end)
+        days = part.pop("days")
+        if combined is None:
+            combined = part
+        elif any(
+            combined[field] != part[field]
+            for field in (
+                "source_kind",
+                "station_id",
+                "latitude",
+                "longitude",
+                "elevation_m",
+                "wind_height_m",
+                "time_basis",
+            )
+        ):
+            raise InputDataError("天气分段来源位置或单位不一致")
+        all_days.extend(days)
+        expected_start = segment_end + timedelta(days=1)
+    if combined is None or expected_start != end + timedelta(days=1):
+        raise InputDataError("天气分段未完整覆盖请求日期")
+    combined["days"] = all_days
+    combined["csv_text"] = weather_days_csv(all_days)
+    return combined
 
 
 def aggregate_power(raw: dict[str, Any], start: date, end: date) -> dict[str, Any]:
@@ -42,11 +105,7 @@ def aggregate_power(raw: dict[str, Any], start: date, end: date) -> dict[str, An
             raise ValueError("Source position out of model bounds")
         series = raw["properties"]["parameter"]
         fill = raw["header"]["fill_value"]
-        buffer = io.StringIO(newline="")
-        writer = csv.writer(buffer, lineterminator="\n")
-        writer.writerow(
-            ("date", "tmin_c", "tmax_c", "rain_mm", "radiation_mj_m2", "wind_m_s", "vapor_kpa")
-        )
+        days: list[dict[str, Any]] = []
         for offset in range((end - start).days + 1):
             day = start + timedelta(days=offset)
             hours: dict[str, list[float]] = {name: [] for name in POWER_PARAMETERS}
@@ -85,9 +144,19 @@ def aggregate_power(raw: dict[str, Any], start: date, end: date) -> dict[str, An
                 sum(hours["WS2M"]) / 24,
                 vapor,
             ]
-            writer.writerow([day.isoformat(), *(round(value, 6) for value in values)])
-        text = buffer.getvalue()
-        days = parse_weather_csv(text)
+            days.append(
+                {
+                    "date": day.isoformat(),
+                    "tmin_c": round(values[0], 6),
+                    "tmax_c": round(values[1], 6),
+                    "rain_mm": round(values[2], 6),
+                    "radiation_mj_m2": round(values[3], 6),
+                    "wind_m_s": round(values[4], 6),
+                    "vapor_kpa": round(values[5], 6),
+                }
+            )
+        text = weather_days_csv(days)
+        days = [dict(day) for day in parse_weather_csv(text)]
         return {
             "source_kind": "gridded",
             "station_id": None,
@@ -117,10 +186,22 @@ def validate_power_provenance(payload: dict[str, Any]) -> None:
             date.fromisoformat(provenance["start_date"]),
             date.fromisoformat(provenance["end_date"]),
         )
-        raw = provenance["raw_response"]
-        if content_hash(raw) != provenance["raw_hash"]:
+        raw_response = provenance["raw_response"]
+        if content_hash(raw_response) != provenance["raw_hash"]:
             raise ValueError("Raw hash mismatch")
-        derived = aggregate_power(raw, start, end)
+        raw_segments = raw_response.get("segments")
+        if raw_segments is None:
+            segments = [(start, end, raw_response)]
+        else:
+            segments = [
+                (
+                    date.fromisoformat(segment["start_date"]),
+                    date.fromisoformat(segment["end_date"]),
+                    segment["response"],
+                )
+                for segment in raw_segments
+            ]
+        derived = aggregate_segments(segments, start, end)
         for field in (
             "source_kind",
             "station_id",

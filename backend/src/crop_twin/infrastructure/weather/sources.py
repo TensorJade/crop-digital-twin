@@ -14,11 +14,13 @@ from crop_twin.domain.simulation.weather import WeatherUnavailable
 from crop_twin.infrastructure.weather.http import POWER_ENDPOINT, STATION_ENDPOINT, WeatherHttp
 from crop_twin.infrastructure.weather.power import (
     ADAPTER_VERSION,
+    MAX_WEATHER_DAYS,
     POWER_LICENSE,
     POWER_LIMIT,
     POWER_PARAMETERS,
     POWER_SOURCE,
-    aggregate_power,
+    SEGMENT_MAX_DAYS,
+    aggregate_segments,
     check_period,
     validate_power_provenance,
 )
@@ -35,26 +37,48 @@ class WeatherSources:
 
     def preview(self, plot: Plot, start: date, end: date) -> dict[str, Any]:
         """Fetch raw UTC hours and a normalized candidate; saving is a separate POST."""
-        check_period(start, end)
-        query = {
-            "parameters": ",".join(POWER_PARAMETERS),
-            "community": "AG",
-            "latitude": str(plot.latitude),
-            "longitude": str(plot.longitude),
-            "start": (start - timedelta(days=1)).strftime("%Y%m%d"),
-            "end": end.strftime("%Y%m%d"),
-            "format": "JSON",
-            "time-standard": "UTC",
-        }
-        data = self.http.get(POWER_ENDPOINT, query, POWER_LIMIT)
+        check_period(start, end, max_days=MAX_WEATHER_DAYS)
+        ranges: list[tuple[date, date]] = []
+        segment_start = start
+        while segment_start <= end:
+            segment_end = min(segment_start + timedelta(days=SEGMENT_MAX_DAYS - 1), end)
+            ranges.append((segment_start, segment_end))
+            segment_start = segment_end + timedelta(days=1)
+        raw_segments: list[tuple[date, date, dict[str, Any]]] = []
         try:
-            raw = json.loads(data)
-            weather = aggregate_power(raw, start, end)
+            for segment_start, segment_end in ranges:
+                query = {
+                    "parameters": ",".join(POWER_PARAMETERS),
+                    "community": "AG",
+                    "latitude": str(plot.latitude),
+                    "longitude": str(plot.longitude),
+                    "start": (segment_start - timedelta(days=1)).strftime("%Y%m%d"),
+                    "end": segment_end.strftime("%Y%m%d"),
+                    "format": "JSON",
+                    "time-standard": "UTC",
+                }
+                data = self.http.get(POWER_ENDPOINT, query, POWER_LIMIT)
+                raw_segments.append((segment_start, segment_end, json.loads(data)))
+            weather = aggregate_segments(raw_segments, start, end)
         except (ValueError, TypeError, UnicodeError, InputDataError):
             raise WeatherUnavailable(
                 "WEATHER_DATA_INVALID", "天气源资料不完整或单位变化，请更换日期或导入CSV"
             ) from None
         days = weather.pop("days")
+        if len(raw_segments) == 1:
+            raw_response: dict[str, Any] = raw_segments[0][2]
+        else:
+            raw_response = {
+                "format": "nasa_power_hourly_segments",
+                "segments": [
+                    {
+                        "start_date": segment_start.isoformat(),
+                        "end_date": segment_end.isoformat(),
+                        "response": raw,
+                    }
+                    for segment_start, segment_end, raw in raw_segments
+                ],
+            }
         weather["provider"] = {
             "code": "nasa_power_hourly",
             "adapter_version": ADAPTER_VERSION,
@@ -63,8 +87,8 @@ class WeatherSources:
             "requested_latitude": plot.latitude,
             "requested_longitude": plot.longitude,
             "retrieved_at": datetime.now(UTC).isoformat(),
-            "raw_response": raw,
-            "raw_hash": content_hash(raw),
+            "raw_response": raw_response,
+            "raw_hash": content_hash(raw_response),
         }
         try:
             validate_power_provenance(weather)

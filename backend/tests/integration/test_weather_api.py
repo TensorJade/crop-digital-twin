@@ -143,7 +143,7 @@ def test_invalid_dates_and_shape_never_fetch(client):
     http, _, query = setup(client)
     assert (
         client.get(
-            "/api/v1/weather/preview", params={**query, "end_date": "2024-07-01"}
+            "/api/v1/weather/preview", params={**query, "end_date": "2025-04-01"}
         ).status_code
         == 400
     )

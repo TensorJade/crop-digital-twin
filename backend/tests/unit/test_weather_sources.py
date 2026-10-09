@@ -4,7 +4,7 @@ import io
 import json
 import math
 from copy import deepcopy
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -141,6 +141,40 @@ def test_provenance_recomputes_csv_hash_and_request_coordinates_without_filling_
             altered["provider"]["adapter_version"] = "unknown"
         with pytest.raises(InputDataError):
             validate_power_provenance(altered)
+
+
+def test_long_period_is_requested_in_segments_and_rejoined_with_each_raw_response():
+    class LongFixtureHttp(FixtureHttp):
+        def get(self, endpoint, parameters, limit):
+            self.calls.append((endpoint, parameters, limit))
+            if endpoint != transport.POWER_ENDPOINT:
+                return super().get(endpoint, parameters, limit)
+            raw = raw_weather()
+            start = datetime.strptime(parameters["start"], "%Y%m%d").date()
+            end = datetime.strptime(parameters["end"], "%Y%m%d").date()
+            series = raw["properties"]["parameter"]
+            for current in (
+                start + timedelta(days=offset) for offset in range((end - start).days + 1)
+            ):
+                for hour in range(24):
+                    key = f"{current:%Y%m%d}{hour:02d}"
+                    series["T2M"][key] = 20.0
+                    series["T2MDEW"][key] = 12.0
+                    series["WS2M"][key] = 2.0
+                    series["PRECTOTCORR"][key] = 0.1
+                    series["ALLSKY_SFC_SW_DWN"][key] = 0.5
+            return json.dumps(raw).encode("utf-8")
+
+    client = LongFixtureHttp()
+    result = WeatherSources(client).preview(plot(), date(2024, 3, 2), date(2024, 7, 1))
+    data = result["asset"]["data"]
+    assert result["day_count"] == 122
+    assert len(client.calls) == 2
+    assert data["provider"]["raw_response"]["format"] == "nasa_power_hourly_segments"
+    assert len(data["provider"]["raw_response"]["segments"]) == 2
+    assert data["csv_text"].splitlines()[1].startswith("2024-03-02,")
+    assert data["csv_text"].splitlines()[-1].startswith("2024-07-01,")
+    validate_power_provenance(data)
 
 
 def test_station_candidates_sorted_with_coverage_not_claimed_as_connected_observations():
