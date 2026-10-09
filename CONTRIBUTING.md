@@ -29,7 +29,7 @@ git commit -m "feat(farm): 增加农事记录"
 
 ## 分支现状
 
-远程仓库为 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)。scaffold、farm_management、identity、simulation_inputs、pcse 和 weather 功能分支已推送。当前分支为 `codex/feature_weather_20261009`，基于 PCSE 提交 `2629b8e`。
+远程仓库为 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)。scaffold、farm_management、identity、simulation_inputs、pcse、weather 和 long_weather 功能分支已推送。当前分支为 `codex/feature_long_weather_20261009`，基于天气功能提交 `60c4d83`。
 
 远程默认分支仍为 scaffold；最新功能请查看 weather 分支。本地 `release_20261008` 已推进到 `2629b8e`，远程尚未建立发布分支。`master`、`develop`、`test` 也仅在本地。首个提交及分支建立方式见 [ADR 0001](docs/adr/0001-workspace-baseline.md)。
 

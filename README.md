@@ -99,6 +99,6 @@ crop-digital-twin/
 └─ backend/tests/              # API、迁移、故障、双数据库与并发
 ~~~
 
-详细语言与目录见 [目录说明](docs/directory-structure.md)，PCSE/天气数据源与许可见 [第三方清单](THIRD_PARTY.md)。数据库、.env、影像、依赖、输出和备份不进入 Git。当前功能分支 codex/feature_weather_20261009，代码与日志同步至 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)；协作见 [CONTRIBUTING](CONTRIBUTING.md)。
+详细语言与目录见 [目录说明](docs/directory-structure.md)，PCSE/天气数据源与许可见 [第三方清单](THIRD_PARTY.md)。数据库、.env、影像、依赖、输出和备份不进入 Git。当前功能分支 `codex/feature_long_weather_20261009`，代码与日志同步至 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)；协作见 [CONTRIBUTING](CONTRIBUTING.md)。
 
 后续工作包括授权站点观测、长季天气、移栽水田适配和当地实测验证，再接入卫星地图。相邻 wofost_lai_edge 独立维护，复用前检查实现和许可。历史提交说明见 [提交记录](docs/dev-log/commits.md)。
