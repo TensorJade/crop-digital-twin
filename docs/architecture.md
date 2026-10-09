@@ -1,6 +1,6 @@
 # 产品与实现架构
 
-当前采用模块化 FastAPI 后端、Vue Web 前端、独立算法包和 SQL worker。API 负责授权和快速提交，计算在独立进程执行；本地 SQLite、服务器 PostgreSQL 为唯一业务事实来源，无需 Redis。
+系统由 FastAPI 后端、Vue 前端、独立算法包和 SQL worker 组成。API 处理授权和任务提交，worker 在独立进程中计算。业务数据保存在 SQLite 或 PostgreSQL，当前任务量由 SQL 队列处理。
 
 ~~~mermaid
 flowchart LR
@@ -20,14 +20,26 @@ flowchart LR
   WEATHER --> API
 ~~~
 
-已实现M1/M2/M3.1/M3.2及M3.3历史网格天气/站点目录：天气预览并保存原始响应 → 输入封存 → SQL排队 → 独立worker → 真实Wofost72_PP → 版本化日值/曲线/导出。API不导入PCSE，算法不读HTTP或应用数据库。天气只在明确请求时获取，短SQL授权事务在上游HTTP之前结束；目录进程内缓存24小时，无Redis。授权站点观测、当天更新/预测、卫星底图/空间扩展、影像对象存储和遥感校准仍待实施。初始目标图保存在docs/diagrams，与当前实现分别维护。
+目前已实现农田、账户、输入、潜在生长计算，以及历史天气和站点目录。主要流程为：天气预览与保存 → 输入快照 → SQL 排队 → worker 计算 → 日值、曲线和导出。
 
-实际数据流见 [农田](modules/farm-management.md)、[账户](modules/identity.md)、[输入](modules/simulation-inputs.md)、[计算](modules/potential-simulation.md)和[天气](modules/weather-sources.md)。前端各功能集中组件、类型和API；后端接口负责校验/授权，用例负责事务与幂等，领域无框架依赖，存储适配负责组织范围SQL，共用HTTP/分页不反向依赖业务。
+API 不导入 PCSE，算法不访问 HTTP 或应用数据库。天气获取前完成 SQL 授权检查并关闭事务，站点目录在进程内缓存 24 小时。授权站点观测、当天更新、预测、卫星地图、影像存储和遥感校准待开发。初始目标图保存在 docs/diagrams。
+
+| 层 / 组件 | 职责 |
+|---|---|
+| 前端功能模块 | 组件、类型、请求及页面状态 |
+| 后端 API | 请求校验、授权、响应 |
+| 应用服务 | 用例、事务和请求去重 |
+| 领域层 | 对象和业务规则，无框架依赖 |
+| 存储适配 | SQL、组织范围和锁 |
+| 天气适配 | 固定源请求、日值转换和目录缓存 |
+| worker / 算法包 | 任务领取、进程隔离和模型执行 |
+
+共用 HTTP 和分页模块独立于业务模块。各模块数据流见 [农田](modules/farm-management.md)、[账户](modules/identity.md)、[输入](modules/simulation-inputs.md)、[计算](modules/potential-simulation.md)和 [天气](modules/weather-sources.md)。
 
 账户使用 Argon2id、可撤销 SQL 会话、HttpOnly Cookie 和内存 CSRF，无 JWT/Redis。组织内共享地块，跨组织资源返回404。写操作与审计同事务；停用/改密码撤销会话。旧地块接收须显式初始化，不自动归属首次登录者。见 [ADR0003](adr/0003-identity.md)。
 
 资料、输入快照和历史结果只追加，农事修正保留原版本。一张 simulation_runs 同时保存有界任务与结果，组织/request_key 去重；领取用短事务和租约令牌，计算期间无 SQL 写锁，迟到 worker 不能覆盖新租约。过期任务最多领取三次，确定失败须新建计算；任务/结果状态与审计一致。无 worker 时持久排队，重启后可恢复。见 [ADR0004](adr/0004-simulation-inputs.md)、[ADR0005](adr/0005-potential-simulation.md)。
 
-PCSE 固定版本，仅在隔离临时目录/环境中导入，阻止默认用户配置/演示数据库参与业务。不携带应用数据库或账户秘密，不下载外部参数/天气，不执行用户脚本。模型只支持直播已出苗的潜在生产条件；冻结的农事供追踪，尚无灌排/施肥响应。软件可执行性与农艺适用性分别验证。
+PCSE 固定版本，仅在隔离临时目录/环境中导入，阻止默认用户配置/演示数据库参与业务。不携带应用数据库或账户秘密，不下载外部参数/天气，不执行用户脚本。模型只支持直播已出苗的潜在生产条件；冻结的农事供追踪，尚无灌排/施肥响应。模型执行和农艺适用性分别检查。
 
-后续影像在对象存储保留原始文件，SQL 保存来源、版本和校验和；遥感观测、未更新预测、校准结果分别留存。Redis 仅在实测容量或协调需要时引入。production 启动保护保留到 M7；部署、备份恢复、容量与 SLA 需试点验收。
+后续影像拟使用对象存储，SQL 保存来源、版本和校验和；遥感观测、原始预测和校准结果分别留存。根据容量和协调需求再评估 Redis。production 启动保护保留到 M7，部署、备份恢复、容量及 SLA 在试点阶段验收。

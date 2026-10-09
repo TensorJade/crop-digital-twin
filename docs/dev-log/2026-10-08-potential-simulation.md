@@ -1,70 +1,88 @@
-# 开发日志：M3.2 潜在生长计算与离线天气适配
+# 2026-10-08 M3.2 潜在生长计算
 
-- 日期：2026-10-08；开发/记录：Codex，结果由实际工具执行核验。
-- 路径：D:/Dev/软著/crop-digital-twin。
-- 分支：codex/feature_pcse_20261008，基于 release_20261008 并快进 M3.1 50ba3c0cfe4c856c701b1e85744de57203a329d0。
-- 软件/API/Web0.5.0，算法包0.3.0，输入/结果契约1.0.0，PCSE6.0.13，适配器1.0.0。
-- 用户授权继续按模块开发并同步仓库；首版华南水稻，具体县市/品种未指定，没有猜测填入真实参数。
-
-## 范围和设计
-
-复用封存输入，实现快照 → 持久排队 → 独立 worker → 真实 PCSE 潜在生产 → 日值/曲线/版本/下载。选 Wofost72_PP，假定水肥充足、无病虫害胁迫；仅直播、明确出苗、已发生的连续北京时间天气。不把通用水量平衡当作已验证水田管理，不以贮藏器官干物质作为实收稻谷产量。
-
-一个 SQL 表和独立 CLI worker 足以满足本轮需要，无 Redis/Celery/微服务/通用任务框架。API 用请求UUID去重，只做预检/排队；独立 worker 短事务领取120s租约，算法子进程最多60s，计算期间不占写事务。过期租约最多三次领取，私有令牌阻止迟到写回；确定失败保留安全错误码，重新计算用新任务。操作者启用/角色、输入哈希、组织和引擎版本在领取时复核；已运行任务的即时取消尚未实现。
-
-任务、状态与审计同事务，失败一起回滚。完成审计故障留原运行租约，到期可恢复。API 摘要不返回结果/私有租约，详情仅本组织可见；只读成员可查看和下载，无提交计算权限。
-
-## 文件和数据流
-
-- backend/domain/simulation/runs.py、application/run_service.py/run_repository.py：计算对象、幂等用例与存储边界。
-- api/v1/runs.py/run_schemas.py、database/run_models.py/run_repository.py、迁移0004：三个操作、新表、组织范围及冻结DDL。
-- backend/workers/simulation.py、scripts/simulation_worker.py/start-worker.ps1：短事务领取/完成、租约恢复、独立启动。
-- packages/crop_engine/potential.py/pcse_runner.py：重复校验封存输入、限时隔离子进程、真实模型和日值。
-- 输入schema/service及天气表单：来源提供 Angstrom A/B，两者同时提供且符合PCSE范围；旧资料仍能保存，缺系数不能运行。
-- frontend/features/simulation：任务API/类型、历史/轮询/下载、SVG曲线/日期滑块/数值，FarmPage增加“生长计算”。
-- tests/fixtures/potential-input.json：自有合成软件验收品种与15日天气，不是农艺参数模板。
-- backend/engine测试、growth.spec.ts、runs.test.ts、e2e_api.py实际worker、版本/锁文件/OpenAPI、模块设计/ADR/工程文档。
-
-详细状态、接口、数据流和科学条件见 [模块设计](../modules/potential-simulation.md)、[ADR0005](../adr/0005-potential-simulation.md)。
-
-## 科学依赖和单位核对
-
-查阅 PCSE 官方模型/天气文档、PyPI6.0.13 与安装包源码。固定 Wofost72_PP、ParameterProvider、实际 WeatherDataProvider/Container；reference_ET(PM)输出mm/day，除10传入E0/ES0/ET0的cm/day。雨量mm→cm，辐射MJ/m²→J/m²，蒸汽压kPa→hPa；2m风速、来源坐标/海拔与北京时间日界明确。A=0.1–0.4、B=0.3–0.7、和=0.6–0.9，由资料提供者声明，没有当地默认值。
-
-只在临时子进程导入PCSE，白名单环境不携带应用数据库/账号秘密，-I隔离Python用户配置，临时.pcse用户配置/空演示库标记避免改写实际用户目录和创建默认demo数据；不查询该标记、不联网取参数或天气。父进程未导入PCSE，实际用户.pcse前后文件状态未改变。官方版权/许可声明和边界见 [第三方清单](../../THIRD_PARTY.md)。
-
-模型运行至已发生的截止日，成熟可能提前终止作物输出，单列last_crop_date。结果包含日值、规范天气、模型/适配/软件版本、输入哈希和假设；simulation_executed=true，agronomically_validated=false，management_effects_applied=false。输入快照仍simulation_executed=false；新report.simulation_available表示潜在输入满足，旧快照不重写。农事只封存，修正后需保存新快照。
-
-## 本地验证
-
-| 检查 | 实际结果 |
+| 项目 | 内容 |
 |---|---|
-| uv sync --locked --all-packages --group dev | 65个依赖锁定/同步成功，加入官方PCSE及传递科学依赖 |
-| Ruff check/format；mypy | 通过，61个源文件严格检查 |
-| pytest 合并crop_twin/crop_engine | 216项中137通过、79项PG因未配置跳过；94.92%，超过80%门槛 |
-| OpenAPI --check、工作区检查 | 22路径/29 GET/POST操作；30项必要文件 |
-| npm typecheck/lint/format:check/test/build | 通过，22项单元 |
-| Edge Playwright | 全部13流程通过（32.1s）；布局修正后两条生长流程再通过（14.3s） |
-| 图像和导出 | 桌面/390px手机截图已实际查看，无溢出；真实PCSE结果下载并经Python离线校验通过 |
-| 运行库升级 | 0003→0004；原有数据仍零、新任务零，没有运行账户/测试农田/默认参数 |
-| start-worker.ps1 -Once | 空队列正常输出No claimable task并退出 |
+| 记录人 | Codex |
+| 分支 | `codex/feature_pcse_20261008` |
+| 基线 | 50ba3c0cfe4c856c701b1e85744de57203a329d0 |
+| 软件 / 算法包 | 0.5.0 / 0.3.0 |
+| 输入 / 结果契约 | 1.0.0 |
+| PCSE / 适配器 | 6.0.13 / 1.0.0 |
 
-实际黑盒测试两次运行官方内核，15日结果可复现；测试LAI首日0.224、末日约12.3249，属于未校准合成值，只验证软件。单日可执行；缺系数、非法天气/模式/参数被拒绝。PCSE私有子进程未计入父pytest行覆盖率（pcse_runner覆盖显示0），由真实黑盒与浏览器链路验证，未把这部分隐藏或宣称为农艺精度。
+## 修改内容
 
-双数据库参数化测试覆盖请求幂等、输入/组织/只读/CSRF、版本导出、超时/非法结果/大小限制、安全错误、过期令牌/重试耗尽、双worker竞争、操作者停用/输入损坏/引擎版本不符、排队审计回滚和完成审计恢复。PostgreSQL部分本机未运行，必须以远程CI补验。前端验证真实异步任务、曲线日期和指标、下载校验、刷新历史、只读查看。
+接入 Wofost72_PP，使用保存的输入快照排队计算，由独立 worker 执行，返回日值、曲线、历史版本和下载文件。当前支持直播出苗后的潜在生长，假定水肥充足、无病虫害胁迫，使用已发生的连续北京时间天气。水田灌排和施肥响应尚未接入，贮藏器官干物质尚不能换算为实收产量。
 
-开发中修正Ruff长行/SQL约束排版；读取官方许可文件时改为显式UTF-8。页面截图发现确认框被通用label网格样式覆盖、手机曲线文字偏小，已提高局部选择器优先级并复核；刷新失败任务时重取当前详情，避免停止轮询后无法恢复读取。
+| 主要文件 | 改动 |
+|---|---|
+| domain/simulation/runs.py、application/run_service.py、run_repository.py | 任务对象、请求去重、存储接口 |
+| api/v1/runs.py、run_schemas.py | 新增三个操作 |
+| database/run_models.py、run_repository.py、迁移 0004 | 任务和结果表，共 11 张业务表 |
+| workers/simulation.py、scripts/simulation_worker.py、start-worker.ps1 | 任务领取、租约、恢复和启动 |
+| crop_engine/potential.py、pcse_runner.py | 输入复查、隔离进程和 PCSE 日值 |
+| frontend/features/simulation | 历史、轮询、SVG 曲线、日期滑块和下载 |
+| tests/fixtures/potential-input.json | 合成品种和 15 日天气，用于软件测试 |
 
-## Git 与远程验证
+一张 SQL 表保存任务和结果。API 按组织和请求 UUID 去重，检查后入队；worker 用短事务领取 120 秒租约，子进程最多运行 60 秒，计算时释放写事务。过期租约最多领取三次，私有令牌防止迟到结果覆盖新任务状态。领取时复查操作者、角色、输入哈希、组织和版本。确定失败后保留安全错误码，重算建立新任务；运行中即时取消尚未实现。
 
-实现提交7631c73c2d50af0718791f72044279509f836b37已推送。首次[CI运行37782416824](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782416824)的前端22项单元/13条Chromium流程通过（29.3s），Python在Linux的mypy步骤失败，后端测试尚未执行。Linux不识别条件表达式中的Windows专用subprocess.CREATE_NO_WINDOW；Windows本地检查通过，Linux平台本地复现同一错误。改为显式sys.platform分支，本地两平台类型检查均通过；CI增加Windows、本地check增加Linux检查。修正后生长流程重测时首次未选择Edge，本机没有Chromium而无法启动浏览器，随后明确使用已安装Edge，两条流程通过（12.3s）。
+任务状态与审计同事务提交，完成审计故障时保留原租约，过期后可恢复。只读成员可以查看和下载，不能提交计算。详细接口和数据流见 [模块设计](../modules/potential-simulation.md)和 [ADR 0005](../adr/0005-potential-simulation.md)。
 
-修正提交2a1ca91bb08c9ab326448350fe8d8bc4642ba348已推送，[CI运行37782900218](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782900218)的headSha与提交一致，整体及两个任务均success，于2026-10-08 21:19（北京时间）核验。真实PostgreSQL17/SQLite共216项全部通过、无跳过（128.71s），合并覆盖率95.01%；Windows/Linux mypy均61文件通过、Ruff/格式/契约/30项目录检查通过。前端22项单元、构建与13条Chromium流程通过（29.0s）。
+## 模型与单位
 
-远程验证涵盖真实模型日值、双数据库并发/幂等/租约和审计恢复；本机PG仍未运行，以CI补验服务器数据库。当前未合并保护分支、未公开部署，远程无release目标分支、无指定人工审查者；不把工具检查称为人工审核。本文件/progress/协作说明在后续文档提交同步，提交编号可查Git日志。
+使用 PCSE 6.0.13 的 ParameterProvider、WeatherDataProvider、WeatherDataContainer 和 reference_ET(PM)。蒸散量由 mm/day 除以 10 转为 cm/day；雨量 mm 转 cm，辐射 MJ/m² 转 J/m²，蒸汽压 kPa 转 hPa。要求 2m 风速、来源坐标、海拔和北京时间日界。
 
-## 下一步
+Angstrom 系数由资料提供者填写：A 为 0.1–0.4，B 为 0.3–0.7，两者之和为 0.6–0.9。旧天气资料仍可保存，缺系数时不能运行。
 
-M3.2潜在计算子链路完成，M3整体仍进行中。继续授权天气源/站点适配、品种来源/许可与当地实测验证，确定移栽和水田灌排/施肥语义。地图、无人机反射率/LAI和有界校准按后续模块实施，production与备份恢复留至M7。
+PCSE 仅在临时子进程导入，使用环境白名单和 Python `-I`。临时 .pcse 配置和空演示库标记用于隔离默认初始化，运行不读取演示数据，不联网获取参数或天气，也不携带应用数据库和账户凭据。父进程未导入 PCSE，检查前后用户 .pcse 文件未改变。许可见 [第三方清单](../../THIRD_PARTY.md)。
 
-依据：[PCSE官方文档](https://pcse.readthedocs.io/en/stable/code.html)、[PCSE6.0.13官方包](https://pypi.org/project/pcse/6.0.13/)。软件测试仅证明链路、单位和存储行为，不构成华南水稻准确性结论。
+结果记录日值、天气、版本、输入哈希和假设；成熟时可能提前结束作物输出，记录 `last_crop_date`。`simulation_executed=true`，`agronomically_validated=false`，`management_effects_applied=false`。输入快照仍为未执行状态，新的 `report.simulation_available` 表示满足潜在计算条件。农事修正后需另存快照。
+
+## 本地检查结果
+
+| 检查 | 结果 | 备注 |
+|---|---|---|
+| 依赖同步 | 65 项 | 新增 PCSE 及其依赖 |
+| Ruff / mypy | 通过 | mypy 检查 61 个源文件 |
+| 后端 / 算法测试 | 137 项通过，79 项 PostgreSQL 跳过 | 共 216 项，覆盖率 94.92% |
+| OpenAPI / 目录 | 通过 | 22 条路径、29 个操作、30 个文件 |
+| 前端检查 / 构建 | 通过 | 22 项单元 |
+| Edge 浏览器 | 13 条通过，32.1 秒 | 布局修正后两条重测，14.3 秒 |
+| 桌面 / 390px 截图 | 无横向溢出 | 结果下载和离线核验通过 |
+| 运行库迁移 | 0003 → 0004 | 原有数据和新增任务均为空 |
+| worker -Once | 正常退出 | 空队列输出 No claimable task |
+
+官方内核用合成输入执行两次，15 日结果一致；LAI 首日 0.224、末日约 12.3249，仅作为软件测试值。单日运行、缺系数、非法天气、模式和参数均检查。pcse_runner 在父进程覆盖率中显示为 0，通过独立执行和浏览器检查。
+
+双数据库用例覆盖请求去重、权限、CSRF、导出、超时、非法结果、体积限制、过期令牌、重试耗尽、双 worker、成员停用、输入损坏、版本不符和审计恢复。本机 PostgreSQL 未运行，相关用例由 CI 执行。
+
+## 问题处理
+
+| 问题 | 处理 |
+|---|---|
+| Ruff 长行和 SQL 约束排版 | 调整后检查通过 |
+| 官方许可读取编码问题 | 显式使用 UTF-8 |
+| 通用 label 样式影响确认框 | 调整局部选择器优先级 |
+| 手机曲线文字偏小 | 调整并复查截图 |
+| 失败任务刷新后未重新读取 | 刷新时重取详情 |
+| Linux mypy 不识别 CREATE_NO_WINDOW | 改为显式 sys.platform 分支 |
+| 本机未安装 Chromium，重测未指定 Edge | 使用已安装 Edge，两条流程通过，12.3 秒 |
+
+## 提交和 CI
+
+| 提交 | 说明 | CI |
+|---|---|---|
+| 7631c73c2d50af0718791f72044279509f836b37 | 接入 PCSE 和后台任务 | Python 类型检查失败；前端通过 |
+| 2a1ca91bb08c9ab326448350fe8d8bc4642ba348 | 修复跨平台进程参数检查 | 全部通过 |
+| 2629b8e4eb3dd4feca447e7d241ac51d5682351b | 补充计算和数据库检查记录 | 全部通过 |
+
+首次 [CI 37782416824](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782416824)中，前端 22 项单元、13 条 Chromium 流程通过（29.3 秒），Python 在 Linux mypy 处失败，后端测试未执行。问题来自条件表达式中的 Windows 专用参数。修正后本地 Windows/Linux 类型检查均通过，CI 增加 Windows 检查，本地脚本增加 Linux 检查。
+
+修正提交的 [CI 37782900218](https://github.com/TensorJade/crop-digital-twin/actions/runs/37782900218)于 21:19（Asia/Shanghai）检查，两个任务成功。PostgreSQL 17 / SQLite 共 216 项全部通过、无跳过（128.71 秒），覆盖率 95.01%；双平台 mypy 61 个文件、Ruff、契约和目录检查通过。前端 22 项单元、13 条 Chromium 流程通过（29.0 秒）。补记文档的 [CI 37783666060](https://github.com/TensorJade/crop-digital-twin/actions/runs/37783666060)也通过。
+
+提交已推送到功能分支，尚未合并或公开部署，远程发布分支和人工评审待安排。
+
+## 待办
+
+继续开发天气源和站点适配，确认品种来源、许可和当地实测资料，补充移栽水田及灌排、施肥规则。地图、无人机反射率、LAI 和参数校准按后续模块开发，生产部署和备份恢复安排在 M7。
+
+参考：[PCSE 文档](https://pcse.readthedocs.io/en/stable/code.html)、[PCSE 6.0.13](https://pypi.org/project/pcse/6.0.13/)。

@@ -1,13 +1,19 @@
 # 作物算法包（Python）
 
-包0.3.1包含inputs.py纯天气CSV/参数结构/单位/规范JSON与哈希检查，potential.py运行条件和隔离协议，pcse_runner.py真实PCSE6.0.13 Wofost72_PP。算法不依赖HTTP/数据库，PCSE只在私有临时子进程导入，父进程不产生默认配置/演示库副作用。
+版本 0.3.1，处理输入检查和潜在生长计算。
 
-天气日期不重复、不超未来、不补缺测。雨mm→cm、辐射MJ/m²→J/m²、蒸汽压kPa→hPa，风速为2m；reference_ET(PM)输出mm/day，除10传WeatherDataContainer E0/ES0/ET0。Angstrom A/B需来源提供，检查单项及总和，不猜测当地值。
+| 文件 | 职责 |
+|---|---|
+| inputs.py | CSV、参数、单位、规范 JSON 和哈希检查 |
+| potential.py | 运行条件、输入复查和子进程协议 |
+| pcse_runner.py | 在临时进程执行 PCSE 6.0.13 Wofost72_PP |
 
-静态完整性不等于全部生理/农艺校验。潜在模式仅支持直播实际出苗、完整rice/WOFOST72参数与北京时间连续已发生天气，最多366日。输入报告simulation_available是满足此模式输入，不是模型已运行。结果输出LAI、DVS、TAGP/TWSO干物质与规范天气，真实成功simulation_executed=true；agronomically_validated=false、management_effects_applied=false。
+算法包无 HTTP 或数据库依赖，PCSE 仅在私有临时子进程导入。计算最长 60 秒，输入上限 1MiB、输出上限 512KiB。使用固定模型、环境白名单和临时配置，不执行用户 Python/YAML，也不下载参数或天气。版本和许可见根 THIRD_PARTY.md。
 
-真实PCSE仅在60s限时隔离子进程运行，输入最多1MiB、输出512KiB；固定模型配置、白名单环境、临时用户配置，不下载天气/参数，不执行用户Python/YAML。版本和许可见根THIRD_PARTY.md。软件测试用自行构造的合成参数，不提供华南生产默认品种；移栽、水田管理/精度及遥感校准以后独立实施。
+天气要求连续、日期不重复且已发生，最多 366 日，缺测时拒绝运行。雨量 mm 转 cm、辐射 MJ/m² 转 J/m²、蒸汽压 kPa 转 hPa，风速为 2m。reference_ET(PM) 的 mm/day 除以 10 后传入 E0/ES0/ET0。Angstrom A/B 由来源提供者声明，检查单项和总和。
 
-规范JSON排序键、UTF-8、禁止NaN，整数值浮点归一为整数（负零为零）。scripts/verify_input.py可核验输入/结果下载的payload/hash；仅证明内容一致，非签名、来源认证或农艺验证。真实PCSE子进程以黑盒执行测试验证，其行覆盖不合并到父pytest覆盖率。
+潜在模式要求直播实际出苗、完整 rice/WOFOST72 参数和北京时间天气。`simulation_available` 表示满足输入条件，成功结果标记 `simulation_executed=true`，输出 LAI、DVS、TAGP、TWSO 和规范天气。`agronomically_validated=false`、`management_effects_applied=false`；移栽、水田管理和当地验证待完成。测试使用合成参数，系统不预置生产默认品种。
 
-模型适配1.0.1仅扩展weather_method.source_kind/raw_hash与网格适用条件，数值方法不变。NASA获取/UTC+8小时转换在后端天气模块；算法只读冻结日值/元数据，不重取天气。来源/hash引用保留在新结果，旧结果不更新。
+规范 JSON 使用排序键、UTF-8，禁止 NaN，整数值浮点转为整数，负零转为零。scripts/verify_input.py 检查下载文件的 payload/hash 一致性。来源认证和农艺验证另外处理。PCSE 子进程用独立执行测试检查，不计入父 pytest 行覆盖率。
+
+模型适配器 1.0.1 增加 weather_method.source_kind、raw_hash 和网格使用条件。NASA 获取和 UTC+8 转换位于后端，算法读取快照中的日值与来源，不重新联网；旧结果保留。

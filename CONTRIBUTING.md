@@ -1,23 +1,40 @@
 # 开发与 Git 工作流
 
-1. 阅读需求编号、架构和当前进度；在 `docs/dev-log/` 创建当日真实日志。
-2. 从目标 `release_YYYYMMDD` 创建 `<开发者>/feature_<功能>_<日期>` 分支。
-3. 编码、运行相关检查、更新接口契约及文档；复核 `git diff`、`git diff --cached`、未跟踪文件和忽略规则。
-4. 提交只表达一个逻辑变化，例如 `feat(plots): add plot boundary validation`、`fix(engine): correct radiation unit conversion`、`docs: record calibration validation`。
-5. 配置远程后拉取目标 release 分支、处理冲突、推送功能分支、发起评审。至少一名负责人审查通过后再合并。
+1. 阅读需求、架构和当前进度，在 `docs/dev-log/` 创建开发日志。
+2. 从目标 `release_YYYYMMDD` 建立 `<开发者>/feature_<功能>_<日期>` 分支。
+3. 完成修改和相关检查，更新接口契约及文档，检查未跟踪文件和暂存区。
+4. 按一项逻辑改动提交，推送功能分支。
+5. 发布分支准备就绪后，处理目标分支冲突并发起评审，经负责人审查后合并。
 
-```powershell
+## 提交说明
+
+标题保留 `类型(模块): 改动` 格式，说明具体做了什么。正文按需要补充原因和检查结果，避免重复标题或写成工作汇报。
+
+| 类型 | 用途 | 示例 |
+|---|---|---|
+| feat | 新增功能 | `feat(weather): 按地块获取历史天气` |
+| fix | 修复问题 | `fix(farm): 修复空列表下的登记表单` |
+| docs | 修改文档 | `docs: 整理模块说明和测试记录` |
+| chore | 调整工具或配置 | `chore: 更新开发环境脚本` |
+
+~~~powershell
 git status --short
 git switch -c yourname/feature_farm_20261009 release_20261008
 git add backend/src/crop_twin/domain/farm docs/dev-log
 git diff --cached
-git commit -m "feat(farm): add farm business rules"
-```
+git commit -m "feat(farm): 增加农事记录"
+~~~
 
-初始化特例：空仓库没有 master/release 历史，因此首个骨架提交在 `codex/feature_scaffold_20261008` 上建立，再建立本地 master、develop、test、release_20261008 基线指针。该基线是开发骨架，不是产品发布。见 [ADR 0001](docs/adr/0001-workspace-baseline.md)。
+历史提交的中文索引见 [提交记录](docs/dev-log/commits.md)。已推送的提交保留原编号和说明，后续提交采用上述写法。
 
-远程 `origin` 为 `https://github.com/TensorJade/crop-digital-twin.git`。scaffold、farm_management、identity、simulation_inputs 和 pcse 功能分支已按用户授权推送；当前开发/同步分支为 `codex/feature_weather_20261009`，从已验证PCSE基线2629b8e建立。本地release_20261008快进到该基线，仅用于连续开发。远程默认分支仍为scaffold，查看最新实现须选择weather功能分支。master、develop、test、release_20261008仍仅在本地，远程尚无目标release分支。后续发布基线分支、发起正式评审和设置默认分支时，由负责人同步分支保护与检查要求。
+## 分支现状
 
-本地分支名不会产生平台保护权限。本次推送未配置分支保护或完成正式评审；GitHub Actions 已触发，其结论以具体提交的运行页面为准。日常功能继续在功能分支开发、记录日志并复核提交，再按已授权的范围推送。
+远程仓库为 [TensorJade/crop-digital-twin](https://github.com/TensorJade/crop-digital-twin)。scaffold、farm_management、identity、simulation_inputs、pcse 和 weather 功能分支已推送。当前分支为 `codex/feature_weather_20261009`，基于 PCSE 提交 `2629b8e`。
 
-不要提交 `.env`、数据集、影像、运行日志、备份、依赖或构建输出。仅存储非敏感小型示例与来源清单；已跟踪文件不会自动受后续 `.gitignore` 规则保护。
+远程默认分支仍为 scaffold；最新功能请查看 weather 分支。本地 `release_20261008` 已推进到 `2629b8e`，远程尚未建立发布分支。`master`、`develop`、`test` 也仅在本地。首个提交及分支建立方式见 [ADR 0001](docs/adr/0001-workspace-baseline.md)。
+
+功能分支已有 CI 检查，正式评审、默认分支调整和分支保护由负责人在发布前安排。
+
+## 文件范围
+
+提交代码、契约、文档和小型非敏感示例。`.env`、密钥、数据集、影像、运行日志、备份、依赖和构建输出放在忽略目录中。新增忽略规则前检查文件是否已被 Git 跟踪。

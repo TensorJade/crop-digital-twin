@@ -1,13 +1,22 @@
 # 开发日志
 
-文件名为 `YYYY-MM-DD-主题.md`。一份日志对应真实的一次开发工作；同一天可有多个主题。记录人员、时间、需求/任务、实际文件变更、检查命令与结果、限制、Git 分支/提交和下一步。不回填虚构的开发活动。
+一份日志记录一次开发工作，文件名为 `YYYY-MM-DD-主题.md`。同一天可以有多份日志。记录修改内容、检查结果、问题处理、待办和提交编号，保留当时的版本与结果。
 
-```powershell
+~~~powershell
 .\scripts\new-dev-log.ps1 -Slug 'farm-management' -Author '开发者姓名'
-```
+~~~
 
-模板在 `docs/templates/dev-log.md`。同名文件存在时脚本会拒绝覆盖。实际进度维护在 `docs/progress.md`；版本变化维护在 CHANGELOG.md。运行日志放忽略的 runtime/，两者用途不同。
+脚本使用 [日志模板](../templates/dev-log.md)，同名文件存在时会拒绝覆盖。当前状态见 [开发进度](../progress.md)，版本变化见 [变更记录](../../CHANGELOG.md)。服务运行日志放在忽略的 `runtime/` 目录。
 
-当前模块记录：[M1 农田管理](2026-10-08-farm-management.md)、[M2 账户与组织授权](2026-10-08-identity.md)、[M3.1 输入与快照](2026-10-08-simulation-inputs.md)、[M3.2 潜在计算](2026-10-08-potential-simulation.md)。初始骨架和首次远程连接日志保留当时状态，不回改为后续能力。
+| 日期 | 内容 | 日志 |
+|---|---|---|
+| 2026-10-08 | 项目目录和开发环境 | [项目初始化](2026-10-08-workspace-bootstrap.md) |
+| 2026-10-08 | GitHub 连接和首次推送 | [仓库配置](2026-10-08-github-sync.md) |
+| 2026-10-08 | 地块、种植季和农事 | [M1 农田管理](2026-10-08-farm-management.md) |
+| 2026-10-08 | 登录、组织和权限 | [M2 账户与授权](2026-10-08-identity.md) |
+| 2026-10-08 | 输入资料和快照 | [M3.1 模拟输入](2026-10-08-simulation-inputs.md) |
+| 2026-10-08 | PCSE 和后台计算 | [M3.2 生长计算](2026-10-08-potential-simulation.md) |
+| 2026-10-09 | 历史天气和站点目录 | [M3.3 天气获取](2026-10-09-weather-sources.md) |
+| 2026-10-09 | 文档措辞、表格和提交说明 | [文档整理](2026-10-09-docs-editing.md) |
 
-最新：[M3.3 天气源与站点目录](2026-10-09-weather-sources.md)，含真实公网烟雾、合成资料软件验收、数据来源边界、Git与CI证据。
+各阶段提交的中文索引见 [提交记录](commits.md)。
