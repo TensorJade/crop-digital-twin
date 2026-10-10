@@ -116,4 +116,4 @@ weather.payload新增可空provider：code=nasa_power_hourly、adapter_version=1
 
 自动测试使用自行构造的小时响应和站点目录，在 test 临时库中注入；页面标记为软件测试资料。公网请求检查另行记录，结果和问题处理见 [开发日志](../dev-log/2026-10-09-weather-sources.md)。
 
-依据：[NASA小时API](https://power.larc.nasa.gov/docs/services/api/temporal/hourly/)、[数据/单位/延迟](https://power.larc.nasa.gov/docs/faqs/data/)、[NOAA ISD](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database)、[FAO露点公式](https://www.fao.org/4/x0490e/x0490e07.htm)。许可与数据使用记录见[第三方清单](../../THIRD_PARTY.md)，设计取舍见[ADR0006](../adr/0006-weather-sources.md)。授权站点观测、当日自动更新、预测、移栽/水田适配和当地实测验证待后续模块。
+依据：[NASA小时API](https://power.larc.nasa.gov/docs/services/api/temporal/hourly/)、[数据/单位/延迟](https://power.larc.nasa.gov/docs/faqs/data/)、[NOAA ISD](https://www.ncei.noaa.gov/products/land-based-station/integrated-surface-database)、[FAO露点公式](https://www.fao.org/4/x0490e/x0490e07.htm)。许可与数据使用记录见[第三方清单](../../THIRD_PARTY.md)，设计取舍见[ADR0006](../adr/0006-weather-sources.md)。站点观测接入仍需确定授权数据源、辐射字段和缺测处理规则；当日自动更新、预测、移栽/水田适配和当地实测验证待后续模块。
