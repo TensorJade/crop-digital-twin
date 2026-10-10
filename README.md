@@ -14,7 +14,7 @@
 - 农事修正、输入和结果保留版本，业务与审计同事务；计算不占用 HTTP 或数据库写事务。
 - 不提供猜测的华南品种参数或天气；合成资料仅供隔离的软件验收。
 
-开发安排见 [模块计划](docs/module-roadmap.md)，当前状态见 [开发进度](docs/progress.md)和 [需求追踪](docs/requirements.md)。数据流和接口见 [输入模块](docs/modules/simulation-inputs.md)、[计算模块](docs/modules/potential-simulation.md)及 [天气模块](docs/modules/weather-sources.md)。原始方案保存在 docs/design-baseline。
+开发安排见 [模块计划](docs/module-roadmap.md)，当前状态见 [开发进度](docs/progress.md)和 [需求追踪](docs/requirements.md)。数据流和接口见 [输入模块](docs/modules/simulation-inputs.md)、[计算模块](docs/modules/potential-simulation.md)、[天气模块](docs/modules/weather-sources.md)及 [影像地图方案](docs/modules/imagery-map-plan.md)。原始方案保存在 docs/design-baseline。
 
 ## 安装与启动
 
