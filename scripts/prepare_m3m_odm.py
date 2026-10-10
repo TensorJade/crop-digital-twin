@@ -193,7 +193,7 @@ def prepare_flight(
         "opendronemap/odm:3.5.3 "
         "--project-path /datasets "
         "--radiometric-calibration camera "
-        "--cog --build-overviews --skip-3dmodel"
+        "--fast-orthophoto --cog --build-overviews --skip-report"
     )
     (output_dir / "run-odm.ps1").write_text(command + "\n", encoding="utf-8")
     return manifest
